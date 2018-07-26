@@ -51,7 +51,7 @@ EXAMPLE
 
 _See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.1/src/commands/texei/package/dependencies/install.ts)_
 
-## `sfdx texei:user:update [FILE]`
+## `sfdx texei:user:update`
 
 Updates the current user of a scratch org
 
