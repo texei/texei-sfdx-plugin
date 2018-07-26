@@ -1,0 +1,5 @@
+{
+  "commandDescription": "Updates the current user of a scratch org",
+  "valuesFlagDescription": "the <fieldName>=<value> pairs you’re updating",
+  "errorNoOrgResults": "No results found for the organization '%s'."
+}
