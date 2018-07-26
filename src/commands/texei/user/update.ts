@@ -19,7 +19,7 @@ export default class Update extends SfdxCommand {
     `$ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"`
   ];
 
-  public static args = [{ name: 'file' }];
+  //public static args = [{ name: 'file' }];
 
   protected static flagsConfig = {
     values: flags.string({ char: 'v', description: messages.getMessage('valuesFlagDescription') })

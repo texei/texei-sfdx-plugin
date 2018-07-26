@@ -10,16 +10,16 @@ texei-sfdx-plugin
 Texeï&#39;s plugin for sfdx
 
 <!-- commands -->
-* [`texei-sfdx-plugin texei:package:dependencies:install`](#texei-sfdx-plugin-texeipackagedependenciesinstall)
-* [`texei-sfdx-plugin texei:user:update [FILE]`](#texei-sfdx-plugin-texeiuserupdate-file)
+* [`sfdx texei:package:dependencies:install`](#texei-sfdx-plugin-texeipackagedependenciesinstall)
+* [`sfdx texei:user:update [FILE]`](#texei-sfdx-plugin-texeiuserupdate-file)
 
-## `texei-sfdx-plugin texei:package:dependencies:install`
+## `sfdx texei:package:dependencies:install`
 
 Install dependent Packages for a sfdx project
 
 ```
 USAGE
-  $ texei-sfdx-plugin texei:package:dependencies:install
+  $ sfdx texei:package:dependencies:install
 
 OPTIONS
   -b, --branch=branch                              the package version’s branch
@@ -45,19 +45,19 @@ OPTIONS
   --loglevel=(trace|debug|info|warn|error|fatal)   logging level for this command invocation
 
 EXAMPLE
-  $ texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "MyPackage1Key MyPackage3Key" -b 
+  $ sfdx texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "MyPackage1Key MyPackage3Key" -b 
   "DEV"
 ```
 
 _See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.1/src/commands/texei/package/dependencies/install.ts)_
 
-## `texei-sfdx-plugin texei:user:update [FILE]`
+## `sfdx texei:user:update [FILE]`
 
 Updates the current user of a scratch org
 
 ```
 USAGE
-  $ texei-sfdx-plugin texei:user:update [FILE]
+  $ sfdx texei:user:update
 
 OPTIONS
   -u, --targetusername=targetusername             username or alias for the target org; overrides default target org
