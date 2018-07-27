@@ -4,7 +4,6 @@ texei-sfdx-plugin
 # TODO:
 
 * For now all packages have to be on the same branch
-* "Waiting for the package install request to complete. Status = IN_PROGRESS" messages are all sent when the install is complete
 
 Texeï&#39;s plugin for sfdx
 
