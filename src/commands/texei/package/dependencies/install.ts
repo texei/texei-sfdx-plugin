@@ -7,6 +7,7 @@ var spawn = require('child-process-promise').spawn;
 const packageIdPrefix = '0Ho';
 const packageVersionIdPrefix = '04t';
 let packageAliasesMap = [];
+const defaultWait = 10;
 
 // Initialize Messages with the current plugin directory
 core.Messages.importMessagesDirectory(__dirname);
@@ -20,16 +21,16 @@ export default class Install extends SfdxCommand {
   public static description = messages.getMessage('commandDescription');
 
   public static examples = [
-    `$ texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "MyPackage1Key MyPackage3Key" -b "DEV"`
+    `$ texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"`
   ];
 
   //public static args = [{ name: 'files' }];
 
   protected static flagsConfig = {
     package: { char: 'p', required: true, description: "ID (starts with 0Ho) or alias of the package to install dependencies" },
-    installationkeys: { char: 'k', required: false, description: "installation key for key-protected packages (space separated)" },
+    installationkeys: { char: 'k', required: false, description: "installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)" },
     branch: { char: 'b', required: false, description: "the package version’s branch" },
-    wait: { char: 'w', type: 'number', required: false, description: "number of minutes to wait for installation status (also used of publishwait)" },
+    wait: { char: 'w', type: 'number', required: false, description: "number of minutes to wait for installation status (also used for publishwait). Default is 10" },
     noprompt: { char: 'r', required: false, type: 'boolean', description: "allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation" }
   };
 
@@ -77,13 +78,12 @@ export default class Install extends SfdxCommand {
         packageFound = true;
 
         // TODO: Move all labels to message
-        // TODO: ? this.ux.log doesn't work when I use spawn
         this.ux.log(`Package dependencies found:`);
         if (dependencies) {
           for (let dependency of (dependencies as core.JsonArray)) {
-            
+
             const { package: dependentPackage, versionNumber } = dependency as core.JsonMap;
-            
+
             const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber);
             packagesToInstall.push(packageVersionId);
             this.ux.log(packageVersionId);
@@ -99,12 +99,25 @@ export default class Install extends SfdxCommand {
       this.ux.log(`Package not found.`);
     }
     else if (packagesToInstall.length > 0) { // Installing Packages
-      
+
       // Getting Installation Key(s)
       let installationKeys = this.flags.installationkeys;
       if (installationKeys) {
         installationKeys = installationKeys.trim();
         installationKeys = installationKeys.split(' ');
+
+        // Format is 1: 2: 3: ... need to remove these
+        for (let i = 0; i < installationKeys.length; i++) {
+
+          let key = installationKeys[i].trim();
+          if (key.startsWith(`${i+1}:`)) {
+            installationKeys[i] = key.substring(2);
+          }
+          else {
+            // Format is not correct, throw an error
+            throw new core.SfdxError("Installation Key should have this format: 1:MyPackage1Key 2: 3:MyPackage3Key");
+          }
+        }
       }
 
       let i = 0;
@@ -129,12 +142,11 @@ export default class Install extends SfdxCommand {
         }
 
         // WAIT
-        if (this.flags.wait) {
-          args.push(`--wait`);
-          args.push(`${this.flags.wait.trim()}`);
-          args.push(`--publishwait`);
-          args.push(`${this.flags.wait.trim()}`);
-        }
+        const wait = this.flags.wait ? this.flags.wait.trim() : defaultWait;
+        args.push(`--wait`);
+        args.push(`${wait}`);
+        args.push(`--publishwait`);
+        args.push(`${wait}`);
 
         // NOPROMPT
         if (this.flags.noprompt) {
@@ -156,11 +168,11 @@ export default class Install extends SfdxCommand {
 
   // This should be in a utils module ?
   async installPackages(installArgs, context) {
-    
+
     await spawn('sfdx', installArgs, { capture: [ 'stdout', 'stderr' ]})
     .then(function (result) {
         // FIXME: This just doesn't work, all logs are sent when install is over be because of .then
-        // FIXME: using context is dirty, find the correct way to do it 
+        // FIXME: using context is dirty, find the correct way to do it
         context.ux.log(result.stdout);
     })
     .catch(function (err) {
@@ -175,7 +187,7 @@ export default class Install extends SfdxCommand {
         // Remove line breaks from string
         this.ux.log(`${data}`.replace(/(\r\n\t|\n|\r\t)/gm,''));
       });
-      
+
       mySpawn.stderr.on('data', (data) => {
         // Remove line breaks from string
         throw new core.SfdxError(`${data}`.replace(/(\r\n\t|\n|\r\t)/gm,''));
@@ -245,7 +257,7 @@ export default class Install extends SfdxCommand {
         // node couldn't execute the command
         this.ux.error(stderr);
         return;
-      } 
+      }
       else {
         let res = JSON.parse(stdout);
         // If Package not found, throw an error
