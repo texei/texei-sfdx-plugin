@@ -153,9 +153,10 @@ export default class Install extends SfdxCommand {
           args.push(`--noprompt`);
         }
 
+        // INSTALL PACKAGE
         // TODO: How to add a debug flag or write to sfdx.log with --loglevel ?
         this.ux.log(`Installing package ${packageId}`);
-        await this.installPackages(args, this);
+        await spawn('sfdx', args, { stdio: 'inherit' });
 
         result.installedPackages[i] = packageId;
 
@@ -164,43 +165,6 @@ export default class Install extends SfdxCommand {
     }
 
     return { message: result };
-  }
-
-  // This should be in a utils module ?
-  async installPackages(installArgs, context) {
-
-    await spawn('sfdx', installArgs, { capture: [ 'stdout', 'stderr' ]})
-    .then(function (result) {
-        // FIXME: This just doesn't work, all logs are sent when install is over be because of .then
-        // FIXME: using context is dirty, find the correct way to do it
-        context.ux.log(result.stdout);
-    })
-    .catch(function (err) {
-      throw new core.SfdxError(err.stderr);
-    });
-
-    /*
-    // TODO: finish switching to child_process to get real time stdout
-    return new Promise((resolve, reject) => {
-      const mySpawn = spawn('sfdx', installArgs, { capture: [ 'stdout', 'stderr' ]});
-      mySpawn.stdout.on('data', (data) => {
-        // Remove line breaks from string
-        this.ux.log(`${data}`.replace(/(\r\n\t|\n|\r\t)/gm,''));
-      });
-
-      mySpawn.stderr.on('data', (data) => {
-        // Remove line breaks from string
-        throw new core.SfdxError(`${data}`.replace(/(\r\n\t|\n|\r\t)/gm,''));
-      });
-
-      mySpawn.on('close', (code) => {
-        console.log(code)
-      })
-    })
-    .catch(function (err) {
-      console.error('[spawn] ERROR: ', err);
-    });
-    */
   }
 
   async getPackageVersionId(name, version) {
