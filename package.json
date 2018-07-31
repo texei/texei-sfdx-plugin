@@ -44,9 +44,15 @@
   "license": "MIT",
   "oclif": {
     "commands": "./lib/commands",
+    "bin": "sfdx",
     "devPlugins": [
       "@oclif/plugin-help"
-    ]
+    ],
+    "topics": {
+      "texei": {
+        "description": "Texeï's plugin for sfdx"
+      }
+    }
   },
   "repository": "https://github.com/texei/texei-sfdx-plugin",
   "scripts": {

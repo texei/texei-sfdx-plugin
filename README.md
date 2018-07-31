@@ -1,23 +1,35 @@
 texei-sfdx-plugin
 =================
 
-# TODO:
-
-* For now all packages have to be on the same branch
-
 Texeï&#39;s plugin for sfdx
 
-<!-- commands -->
-* [`texei-sfdx-plugin texei:package:dependencies:install`](#texei-sfdx-plugin-texeipackagedependenciesinstall)
-* [`texei-sfdx-plugin texei:user:update`](#texei-sfdx-plugin-texeiuserupdate)
+## Install Plugin
 
-## `texei-sfdx-plugin texei:package:dependencies:install`
+### Install as plugin
+
+Install plugin: sfdx plugins:install texei-sfdx-plugin
+
+### Install from source
+
+Install the SDFX CLI.
+
+Clone the repository: git clone https://github.com/texei/texei-sfdx-plugin.git
+
+Install npm modules: npm install
+
+Link the plugin: sfdx plugins:link .
+
+<!-- commands -->
+* [`sfdx texei:package:dependencies:install`](#sfdx-texeipackagedependenciesinstall)
+* [`sfdx texei:user:update`](#sfdx-texeiuserupdate)
+
+## `sfdx texei:package:dependencies:install`
 
 Install dependent Packages for a sfdx project
 
 ```
 USAGE
-  $ texei-sfdx-plugin texei:package:dependencies:install
+  $ sfdx texei:package:dependencies:install
 
 OPTIONS
   -b, --branch=branch                              the package version’s branch
@@ -52,13 +64,13 @@ EXAMPLE
 
 _See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.1/src/commands/texei/package/dependencies/install.ts)_
 
-## `texei-sfdx-plugin texei:user:update`
+## `sfdx texei:user:update`
 
 Updates the current user of a scratch org
 
 ```
 USAGE
-  $ texei-sfdx-plugin texei:user:update
+  $ sfdx texei:user:update
 
 OPTIONS
   -u, --targetusername=targetusername             username or alias for the target org; overrides default target org
