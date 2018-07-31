@@ -62,7 +62,7 @@ EXAMPLE
   3:MyPackage3Key" -b "DEV"
 ```
 
-_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.1/src/commands/texei/package/dependencies/install.ts)_
+_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.2/src/commands/texei/package/dependencies/install.ts)_
 
 ## `sfdx texei:user:update`
 
@@ -85,5 +85,5 @@ EXAMPLES
   $ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"
 ```
 
-_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.1/src/commands/texei/user/update.ts)_
+_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.2/src/commands/texei/user/update.ts)_
 <!-- commandsstop -->
