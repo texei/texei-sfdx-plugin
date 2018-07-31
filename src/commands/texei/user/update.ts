@@ -1,5 +1,4 @@
 import { core, SfdxCommand, flags } from '@salesforce/command';
-//const { exec } = require('child_process');
 var exec = require('child-process-promise').exec;
 
 // Initialize Messages with the current plugin directory
@@ -48,15 +47,15 @@ export default class Update extends SfdxCommand {
 
       const { stdout, stderr } = await exec(updateUserCommand);
       result = stdout;
-      
+
       // Remove line breaks from string
       result = result.replace(/(\r\n\t|\n|\r\t)/gm,'');
-      
+
       this.ux.log(result);
-    } catch (error) { 
+    } catch (error) {
 
       result = error.stderr;
-     
+
       // Remove line breaks from string
       result = result.replace(/(\r\n\t|\n|\r\t)/gm,'');
 

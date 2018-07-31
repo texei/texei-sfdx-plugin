@@ -2,7 +2,6 @@ import { core, SfdxCommand, flags } from '@salesforce/command';
 import { watchFile } from 'fs';
 var exec = require('child-process-promise').exec;
 var spawn = require('child-process-promise').spawn;
-//var spawn = require('child_process').spawn;
 
 const packageIdPrefix = '0Ho';
 const packageVersionIdPrefix = '04t';
@@ -23,8 +22,6 @@ export default class Install extends SfdxCommand {
   public static examples = [
     `$ texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"`
   ];
-
-  //public static args = [{ name: 'files' }];
 
   protected static flagsConfig = {
     package: { char: 'p', required: true, description: "ID (starts with 0Ho) or alias of the package to install dependencies" },
@@ -167,7 +164,7 @@ export default class Install extends SfdxCommand {
     return { message: result };
   }
 
-  async getPackageVersionId(name, version) {
+  private async getPackageVersionId(name, version) {
 
     let packageId = messages.getMessage('invalidPackageName');
     // Keeping original name so that it can be used in error message if needed
@@ -204,6 +201,13 @@ export default class Install extends SfdxCommand {
 
       // SFDX command to retrieve Package Version
       let queryPackageVersion = `sfdx force:data:soql:query --query "${query}" --usetoolingapi --json`;
+
+      // TODO: Move to something like this ?
+      /*
+      const conn = this.org.getConnection();
+      const query = 'Select SubscriberPackageVersionId from Package2Version';
+      const result = await conn.query<Package2Version>(query);
+      */
 
       // If there is a DevHub specified, use it
       if (this.hubOrg) {
