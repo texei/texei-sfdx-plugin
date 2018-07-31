@@ -80,8 +80,8 @@ OPTIONS
   --loglevel=(trace|debug|info|warn|error|fatal)  logging level for this command invocation
 
 EXAMPLES
-  $ sfdx texei:user:update --targetusername myOrg@example.com --values "LanguageLocaleKey='fr'"
-     Successfully updated record: 005D2A90N8A11SVPE2.
+  $ sfdx texei:user:update --targetusername myOrg@example.com --values "LanguageLocaleKey='fr'" 
+  Successfully updated record: 005D2A90N8A11SVPE2.
   $ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"
 ```
 
