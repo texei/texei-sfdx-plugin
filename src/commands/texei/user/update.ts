@@ -13,8 +13,7 @@ export default class Update extends SfdxCommand {
   public static description = messages.getMessage('commandDescription');
 
   public static examples = [
-    `$ sfdx texei:user:update --targetusername myOrg@example.com --values "LanguageLocaleKey='fr'"
-  Successfully updated record: 005D2A90N8A11SVPE2.`,
+    `$ sfdx texei:user:update --targetusername myOrg@example.com --values "LanguageLocaleKey='fr'" \nSuccessfully updated record: 005D2A90N8A11SVPE2.`,
     `$ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"`
   ];
 
@@ -40,6 +39,8 @@ export default class Update extends SfdxCommand {
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
     const userName = this.org.getUsername();
 
+    // TODO: update to use jsforce ?
+    // https://jsforce.github.io/document/#update
     const updateUserCommand = `sfdx force:data:record:update -s User -w "UserName=${userName}" -v "${values}"`;
 
     let result = '';
