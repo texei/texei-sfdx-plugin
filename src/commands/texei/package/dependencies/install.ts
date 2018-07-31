@@ -34,8 +34,8 @@ export default class Install extends SfdxCommand {
   // Comment this out if your command does not require an org username
   protected static requiresUsername = true;
 
-  // Comment this out if your command does not support a hub org username
-  protected static supportsDevhubUsername = true;
+  // Comment this out if your command does not require a hub org username
+  protected static requiresDevhubUsername = true;
 
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
   protected static requiresProject = true;
@@ -199,43 +199,17 @@ export default class Install extends SfdxCommand {
 
       query+= ' ORDER BY BuildNumber DESC Limit 1';
 
-      // SFDX command to retrieve Package Version
-      let queryPackageVersion = `sfdx force:data:soql:query --query "${query}" --usetoolingapi --json`;
+      // Query DevHub to get the expected Package2Version
+      const conn = this.hubOrg.getConnection();
+      const resultPackageId = await conn.tooling.query(query) as any;
 
-      // TODO: Move to something like this ?
-      /*
-      const conn = this.org.getConnection();
-      const query = 'Select SubscriberPackageVersionId from Package2Version';
-      const result = await conn.query<Package2Version>(query);
-      */
-
-      // If there is a DevHub specified, use it
-      if (this.hubOrg) {
-        // TODO: Sometimes it doesn't retrieve the correct DevHub ?
-        queryPackageVersion += ` --targetusername ${this.hubOrg.getUsername()}`;
-      }
-
-      const { err, stdout, stderr } = await exec(queryPackageVersion);
-
-      if (err) {
-        // node couldn't execute the command
-        this.ux.error(err);
-        return;
-      } else if (stderr) {
-        // node couldn't execute the command
-        this.ux.error(stderr);
-        return;
+      if (resultPackageId.size == 0) {
+        // Query returned no result
+        const errorMessage = `Unable to find SubscriberPackageVersionId for dependent package ${name}`;
+        throw new core.SfdxError(errorMessage);
       }
       else {
-        let res = JSON.parse(stdout);
-        // If Package not found, throw an error
-        if (res.result.totalSize == 0) {
-          const errorMessage = `Unable to find SubscriberPackageVersionId for dependent package ${name}`;
-          throw new core.SfdxError(errorMessage);
-        }
-        else {
-          packageId = res.result.records[0].SubscriberPackageVersionId;
-        }
+        packageId = resultPackageId.records[0].SubscriberPackageVersionId;
       }
     }
 
