@@ -157,7 +157,7 @@ export default class Install extends SfdxCommand {
         // INSTALL PACKAGE
         // TODO: How to add a debug flag or write to sfdx.log with --loglevel ?
         this.ux.log(`Installing package ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber === undefined ? '' : ' ' + packageInfo.versionNumber }`);
-//        await spawn('sfdx', args, { stdio: 'inherit' });
+        await spawn('sfdx', args, { stdio: 'inherit' });
 
         this.ux.log('\n');
 
