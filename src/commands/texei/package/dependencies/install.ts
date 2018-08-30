@@ -194,15 +194,15 @@ export default class Install extends SfdxCommand {
 
       // If Build Number isn't set to LATEST, look for the exact Package Version
       if (vers[3] !== 'LATEST') {
-        query += `and BuildNumber=${vers[3]}`;
+        query += `and BuildNumber=${vers[3]} `;
       }
 
       // If Branch is specified, use it to filter
       if (this.flags.branch) {
-        query += `and Branch='${this.flags.branch.trim()}'`;
+        query += `and Branch='${this.flags.branch.trim()}' `;
       }
 
-      query += ' ORDER BY BuildNumber DESC Limit 1';
+      query += 'ORDER BY BuildNumber DESC Limit 1';
 
       // Query DevHub to get the expected Package2Version
       const conn = this.hubOrg.getConnection();
