@@ -38,9 +38,6 @@ OPTIONS
                                                    1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without
                                                    installation key)
 
-  -p, --package=package                            (required) ID (starts with 0Ho) or alias of the package to install
-                                                   dependencies
-
   -r, --noprompt                                   allow Remote Site Settings and Content Security Policy websites to
                                                    send or receive data without confirmation
 
@@ -58,8 +55,7 @@ OPTIONS
   --loglevel=(trace|debug|info|warn|error|fatal)   logging level for this command invocation
 
 EXAMPLE
-  $ texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 
-  3:MyPackage3Key" -b "DEV"
+  $ texei:package:dependencies:install -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"
 ```
 
 _See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.2/src/commands/texei/package/dependencies/install.ts)_

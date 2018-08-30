@@ -20,11 +20,10 @@ export default class Install extends SfdxCommand {
   public static description = messages.getMessage('commandDescription');
 
   public static examples = [
-    `$ texei:package:dependencies:install -p "My Package" -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"`
+    `$ texei:package:dependencies:install -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"`
   ];
 
   protected static flagsConfig = {
-    package: { char: 'p', required: true, description: "ID (starts with 0Ho) or alias of the package to install dependencies" },
     installationkeys: { char: 'k', required: false, description: "installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)" },
     branch: { char: 'b', required: false, description: "the package version’s branch" },
     wait: { char: 'w', type: 'number', required: false, description: "number of minutes to wait for installation status (also used for publishwait). Default is 10" },
@@ -44,9 +43,6 @@ export default class Install extends SfdxCommand {
 
     let result = { installedPackages: [] };
 
-    // Getting Package name
-    const packageName = this.flags.package.trim();
-
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
     const username = this.org.getUsername();
 
@@ -64,38 +60,49 @@ export default class Install extends SfdxCommand {
 
     // Getting Package
     let packagesToInstall = [];
+    
     const packageDirectories = project.get('packageDirectories') as core.JsonArray || [];
-    let packageFound = false;
 
-    for (let packageDirectory  of packageDirectories) {
+    for (let packageDirectory of packageDirectories) {
       packageDirectory = packageDirectory as core.JsonMap;
-      let { package: name, dependencies } = packageDirectory;
+      //this.ux.logJson(packageDirectory);
+      //let { package: dependencies } = packageDirectory;
+      const dependencies = packageDirectory.dependencies || []; //.get('dependencies') as core.JsonArray || [];
 
-      if (name == packageName) {
-        packageFound = true;
+      // TODO: Move all labels to message
+      //this.ux.log(dependencies);
+      
+      if (dependencies && dependencies[0] != undefined) {
+        this.ux.log(`\nPackage dependencies found for package directory ${packageDirectory.path}`);
+        for (let dependency of (dependencies as core.JsonArray)) {
 
-        // TODO: Move all labels to message
-        this.ux.log(`Package dependencies found:`);
-        if (dependencies) {
-          for (let dependency of (dependencies as core.JsonArray)) {
+          //let packageInfo = {dependentPackage:"", versionNumber:"", packageVersionId:""};
+          let packageInfo = { } as core.JsonMap;
 
-            const { package: dependentPackage, versionNumber } = dependency as core.JsonMap;
 
-            const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber);
-            packagesToInstall.push(packageVersionId);
-            this.ux.log(packageVersionId);
-          }
+          const { package: dependentPackage, versionNumber } = dependency as core.JsonMap;
+          //this.ux.log( dependentPackage );
+          packageInfo.dependentPackage = dependentPackage;
+          //packagesToInstall.push( dependentPackage );
+          //this.ux.log( versionNumber );
+          packageInfo.versionNumber = versionNumber;
+          //packagesToInstall.push( versionNumber );
+
+          const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber);
+          //this.ux.log(packageVersionId);
+          //packagesToInstall.push(packageVersionId);
+          packageInfo.packageVersionId = packageVersionId;
+
+          packagesToInstall.push( packageInfo );
+          this.ux.log( `    ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber == undefined ? '' : ' ' + packageInfo.versionNumber }`);
         }
-        else {
-          this.ux.log('No dependencies found');
-        }
+      }
+      else {
+        this.ux.log(`\nNo dependencies found for package directory ${packageDirectory.path}`);
       }
     }
 
-    if (!packageFound) {
-      this.ux.log(`Package not found.`);
-    }
-    else if (packagesToInstall.length > 0) { // Installing Packages
+    if (packagesToInstall.length > 0) { // Installing Packages
 
       // Getting Installation Key(s)
       let installationKeys = this.flags.installationkeys;
@@ -117,8 +124,11 @@ export default class Install extends SfdxCommand {
         }
       }
 
+      this.ux.log(`\n`);
+
       let i = 0;
-      for (const packageId of packagesToInstall) {
+      for (let packageInfo of packagesToInstall) {
+        packageInfo = packageInfo as core.JsonMap;
 
         // Split arguments to use spawn
         let args = [];
@@ -130,7 +140,7 @@ export default class Install extends SfdxCommand {
 
         // PACKAGE ID
         args.push(`--package`);
-        args.push(`${packageId}`);
+        args.push(`${packageInfo.packageVersionId}`);
 
         // INSTALLATION KEY
         if (installationKeys && installationKeys[i]) {
@@ -152,10 +162,12 @@ export default class Install extends SfdxCommand {
 
         // INSTALL PACKAGE
         // TODO: How to add a debug flag or write to sfdx.log with --loglevel ?
-        this.ux.log(`Installing package ${packageId}`);
-        await spawn('sfdx', args, { stdio: 'inherit' });
+        this.ux.log(`Installing package ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber == undefined ? '' : ' ' + packageInfo.versionNumber }`);
+//        await spawn('sfdx', args, { stdio: 'inherit' });
 
-        result.installedPackages[i] = packageId;
+        this.ux.log('\n');
+
+        result.installedPackages[i] = packageInfo;
 
         i++;
       }
