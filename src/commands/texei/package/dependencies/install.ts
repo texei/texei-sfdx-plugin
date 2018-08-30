@@ -79,18 +79,15 @@ export default class Install extends SfdxCommand {
           //let packageInfo = {dependentPackage:"", versionNumber:"", packageVersionId:""};
           let packageInfo = { } as core.JsonMap;
 
-
           const { package: dependentPackage, versionNumber } = dependency as core.JsonMap;
           //this.ux.log( dependentPackage );
           packageInfo.dependentPackage = dependentPackage;
-          //packagesToInstall.push( dependentPackage );
+
           //this.ux.log( versionNumber );
           packageInfo.versionNumber = versionNumber;
-          //packagesToInstall.push( versionNumber );
 
           const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber);
           //this.ux.log(packageVersionId);
-          //packagesToInstall.push(packageVersionId);
           packageInfo.packageVersionId = packageVersionId;
 
           packagesToInstall.push( packageInfo );
