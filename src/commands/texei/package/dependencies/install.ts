@@ -41,7 +41,7 @@ export default class Install extends SfdxCommand {
 
   public async run(): Promise<any> {
 
-    const result = { installedPackages: [] };
+    const result = { installedPackages: {} };
 
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
     const username = this.org.getUsername();
@@ -171,6 +171,8 @@ export default class Install extends SfdxCommand {
   }
 
   private async getPackageVersionId(name, version) {
+
+    this.ux.log(`getPackageVersionId() name ${name} version ${version}`);
 
     let packageId = messages.getMessage('invalidPackageName');
     // Keeping original name so that it can be used in error message if needed
