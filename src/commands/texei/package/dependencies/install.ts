@@ -123,6 +123,10 @@ export default class Install extends SfdxCommand {
       let i = 0;
       for (let packageInfo of packagesToInstall) {
         packageInfo = packageInfo as core.JsonMap;
+        if (result.installedPackages.hasOwnProperty(packageInfo.packageVersionId)) {
+          this.ux.log(`PackageVersionId ${packageInfo.packageVersionId} already installed. Skipping...`);
+          continue;
+        }
 
         // Split arguments to use spawn
         const args = [];
@@ -161,7 +165,7 @@ export default class Install extends SfdxCommand {
 
         this.ux.log('\n');
 
-        result.installedPackages[i] = packageInfo;
+        result.installedPackages[packageInfo.packageVersionId] = packageInfo;
 
         i++;
       }
@@ -171,8 +175,6 @@ export default class Install extends SfdxCommand {
   }
 
   private async getPackageVersionId(name, version) {
-
-    this.ux.log(`getPackageVersionId() name ${name} version ${version}`);
 
     let packageId = messages.getMessage('invalidPackageName');
     // Keeping original name so that it can be used in error message if needed
