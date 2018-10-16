@@ -176,8 +176,6 @@ export default class Install extends SfdxCommand {
 
   private async getPackageVersionId(name, version) {
 
-    this.ux.log(`getPackageVersionId() name ${name} version ${version}`);
-
     let packageId = messages.getMessage('invalidPackageName');
     // Keeping original name so that it can be used in error message if needed
     let packageName = name;
