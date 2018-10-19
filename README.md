@@ -38,6 +38,8 @@ OPTIONS
                                                    1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without
                                                    installation key)
 
+  -n, --namespaces=namespaces                      filter package installation by namespace
+
   -r, --noprompt                                   allow Remote Site Settings and Content Security Policy websites to
                                                    send or receive data without confirmation
 

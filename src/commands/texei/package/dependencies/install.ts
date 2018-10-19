@@ -2,6 +2,7 @@ import { core, SfdxCommand, flags } from '@salesforce/command';
 import { watchFile } from 'fs';
 const exec = require('child-process-promise').exec;
 const spawn = require('child-process-promise').spawn;
+const _ = require('underscore');
 
 const packageIdPrefix = '0Ho';
 const packageVersionIdPrefix = '04t';
@@ -26,6 +27,7 @@ export default class Install extends SfdxCommand {
   protected static flagsConfig = {
     installationkeys: { char: 'k', required: false, description: 'installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)' },
     branch: { char: 'b', required: false, description: 'the package version’s branch' },
+    namespaces: { char: 'n', required: false, description: 'filter package installation by namespace' },
     wait: { char: 'w', type: 'number', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' },
     noprompt: { char: 'r', required: false, type: 'boolean', description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' }
   };
@@ -65,9 +67,19 @@ export default class Install extends SfdxCommand {
 
     for (let packageDirectory of packageDirectories) {
       packageDirectory = packageDirectory as core.JsonMap;
-      // this.ux.logJson(packageDirectory);
-      // let { package: dependencies } = packageDirectory;
-      const dependencies = packageDirectory.dependencies || [];
+
+      let dependencies = packageDirectory.dependencies || [];
+
+      if (this.flags.namespaces !== undefined) {
+        const alowedNamespaces = [] = this.flags.namespaces.split(',');
+        this.ux.log(`filtering dependencies by namespaces: ${this.flags.namespaces}`);
+        dependencies = _.filter(dependencies, (dependency) => {
+          dependency = dependency as core.JsonMap;
+          return (dependency.package.indexOf('.') > -1) && _.find(alowedNamespaces, (nsName) => {
+            return dependency.package.indexOf(nsName) > -1;
+          });
+        });
+      }
 
       // TODO: Move all labels to message
       // this.ux.log(dependencies);
