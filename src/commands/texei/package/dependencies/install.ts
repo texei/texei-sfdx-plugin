@@ -45,13 +45,13 @@ export default class Install extends SfdxCommand {
 
     const result = { installedPackages: {} };
 
-    // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
     const username = this.org.getUsername();
-
-    // Getting Project config
     const project = await core.SfdxProjectJson.retrieve<core.SfdxProjectJson>();
 
-    // Getting a list of alias
+    if (this.flags.namespaces != null) {
+      this.ux.log('Filtering by namespaces: ' + this.flags.namespaces);
+    }
+
     const packageAliases = project.get('packageAliases') || {};
     if (typeof packageAliases !== undefined ) {
 
@@ -65,49 +65,44 @@ export default class Install extends SfdxCommand {
 
     const packageDirectories = project.get('packageDirectories') as core.JsonArray || [];
 
+    this.ux.startSpinner('Resolving dependencies');
+
     for (let packageDirectory of packageDirectories) {
       packageDirectory = packageDirectory as core.JsonMap;
 
-      let dependencies = packageDirectory.dependencies || [];
-
-      if (this.flags.namespaces !== undefined) {
-        const alowedNamespaces = [] = this.flags.namespaces.split(',');
-        this.ux.log(`filtering dependencies by namespaces: ${this.flags.namespaces}`);
-        dependencies = _.filter(dependencies, (dependency) => {
-          dependency = dependency as core.JsonMap;
-          return (dependency.package.indexOf('.') > -1) && _.find(alowedNamespaces, (nsName) => {
-            return dependency.package.indexOf(nsName) > -1;
-          });
-        });
-      }
+      const dependencies = packageDirectory.dependencies || [];
 
       // TODO: Move all labels to message
-      // this.ux.log(dependencies);
       if (dependencies && dependencies[0] !== undefined) {
         this.ux.log(`\nPackage dependencies found for package directory ${packageDirectory.path}`);
         for (const dependency of (dependencies as core.JsonArray)) {
 
-          // let packageInfo = {dependentPackage:"", versionNumber:"", packageVersionId:""};
           const packageInfo = { } as core.JsonMap;
 
-          const { package: dependentPackage, versionNumber } = dependency as core.JsonMap;
-          // this.ux.log( dependentPackage );
+          const dependencyInfo = dependency as core.JsonMap;
+          const dependentPackage: string = ((dependencyInfo.packageId != null) ? dependencyInfo.packageId : dependencyInfo.package) as string;
+          const versionNumber: string = (dependencyInfo.versionNumber) as string;
+          const namespaces: string[] = this.flags.namespaces.split(',');
+
+          if (dependentPackage == null) {
+            throw Error('Dependent package version unknow error.');
+          }
+
           packageInfo.dependentPackage = dependentPackage;
-
-          // this.ux.log( versionNumber );
           packageInfo.versionNumber = versionNumber;
-
-          const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber);
-          // this.ux.log(packageVersionId);
-          packageInfo.packageVersionId = packageVersionId;
-
-          packagesToInstall.push( packageInfo );
-          this.ux.log( `    ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber === undefined ? '' : ' ' + packageInfo.versionNumber }`);
+          const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber, namespaces);
+          if (packageVersionId != null) {
+            packageInfo.packageVersionId = packageVersionId;
+            packagesToInstall.push( packageInfo );
+            this.ux.log( `    ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber === undefined ? '' : ' ' + packageInfo.versionNumber }`);
+          }
         }
       } else {
         this.ux.log(`\nNo dependencies found for package directory ${packageDirectory.path}`);
       }
     }
+
+    this.ux.stopSpinner('Done.');
 
     if (packagesToInstall.length > 0) { // Installing Packages
 
@@ -186,9 +181,9 @@ export default class Install extends SfdxCommand {
     return { message: result };
   }
 
-  private async getPackageVersionId(name, version) {
+  private async getPackageVersionId(name: string, version: string, namespaces: string[]) {
 
-    let packageId = messages.getMessage('invalidPackageName');
+    let packageId = null;
     // Keeping original name so that it can be used in error message if needed
     let packageName = name;
 
@@ -204,9 +199,12 @@ export default class Install extends SfdxCommand {
     } else if (packageName.startsWith(packageIdPrefix)) {
       // Get Package version id from package + versionNumber
       const vers = version.split('.');
-      let query = 'Select SubscriberPackageVersionId, IsPasswordProtected, IsReleased ';
+      let query = 'Select SubscriberPackageVersionId, IsPasswordProtected, IsReleased, Package2.NamespacePrefix ';
       query += 'from Package2Version ';
       query += `where Package2Id='${packageName}' and MajorVersion=${vers[0]} and MinorVersion=${vers[1]} and PatchVersion=${vers[2]} `;
+      if (namespaces != null) {
+        query += ` and Package2.NamespacePrefix IN ('${namespaces.join('\',\'')}')`;
+      }
 
       // If Build Number isn't set to LATEST, look for the exact Package Version
       if (vers[3] !== 'LATEST') {
@@ -218,17 +216,13 @@ export default class Install extends SfdxCommand {
         query += `and Branch='${this.flags.branch.trim()}' `;
       }
 
-      query += 'ORDER BY BuildNumber DESC Limit 1';
+      query += ' ORDER BY BuildNumber DESC Limit 1';
 
       // Query DevHub to get the expected Package2Version
       const conn = this.hubOrg.getConnection();
       const resultPackageId = await conn.tooling.query(query) as any;
 
-      if (resultPackageId.size === 0) {
-        // Query returned no result
-        const errorMessage = `Unable to find SubscriberPackageVersionId for dependent package ${name}`;
-        throw new core.SfdxError(errorMessage);
-      } else {
+      if (resultPackageId.size > 0) {
         packageId = resultPackageId.records[0].SubscriberPackageVersionId;
       }
     }
