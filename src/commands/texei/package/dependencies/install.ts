@@ -82,7 +82,7 @@ export default class Install extends SfdxCommand {
           const dependencyInfo = dependency as core.JsonMap;
           const dependentPackage: string = ((dependencyInfo.packageId != null) ? dependencyInfo.packageId : dependencyInfo.package) as string;
           const versionNumber: string = (dependencyInfo.versionNumber) as string;
-          const namespaces: string[] = this.flags.namespaces.split(',');
+          const namespaces: string[] = this.flags.namespaces !== undefined ? this.flags.namespaces.split(',') : null;
 
           if (dependentPackage == null) {
             throw Error('Dependent package version unknow error.');
@@ -202,6 +202,7 @@ export default class Install extends SfdxCommand {
       let query = 'Select SubscriberPackageVersionId, IsPasswordProtected, IsReleased, Package2.NamespacePrefix ';
       query += 'from Package2Version ';
       query += `where Package2Id='${packageName}' and MajorVersion=${vers[0]} and MinorVersion=${vers[1]} and PatchVersion=${vers[2]} `;
+
       if (namespaces != null) {
         query += ` and Package2.NamespacePrefix IN ('${namespaces.join('\',\'')}')`;
       }
