@@ -9,3 +9,4 @@ node_modules
 /local
 .sfdx
 .vscode
+project-scratch-def.json

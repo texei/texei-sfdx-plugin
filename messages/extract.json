@@ -1,0 +1,4 @@
+{
+  "commandDescription": "Extract Org Shape for an org",
+  "directoryFlagDescription": "the output directory to store the extracted definition file"
+}

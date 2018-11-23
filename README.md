@@ -20,8 +20,31 @@ Install npm modules: npm install
 Link the plugin: sfdx plugins:link .
 
 <!-- commands -->
+* [`sfdx texei:org:shape:extract`](#sfdx-texeiorgshapeextract)
 * [`sfdx texei:package:dependencies:install`](#sfdx-texeipackagedependenciesinstall)
 * [`sfdx texei:user:update`](#sfdx-texeiuserupdate)
+
+## `sfdx texei:org:shape:extract`
+
+Extract Org Shape for an org
+
+```
+USAGE
+  $ sfdx texei:org:shape:extract
+
+OPTIONS
+  -d, --outputdir=outputdir                       the output directory to store the extracted definition file
+  -u, --targetusername=targetusername             username or alias for the target org; overrides default target org
+  --apiversion=apiversion                         override the api version used for api requests made by this command
+  --json                                          format output as json
+  --loglevel=(trace|debug|info|warn|error|fatal)  logging level for this command invocation
+
+EXAMPLE
+  $ sfdx texei:org:shape:extract -u myOrg@example.com -d myFolder" 
+  Successfully extracted Org Shape.
+```
+
+_See code: [src/commands/texei/org/shape/extract.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.3/src/commands/texei/org/shape/extract.ts)_
 
 ## `sfdx texei:package:dependencies:install`
 
@@ -58,7 +81,7 @@ EXAMPLE
   $ texei:package:dependencies:install -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"
 ```
 
-_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.2/src/commands/texei/package/dependencies/install.ts)_
+_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.3/src/commands/texei/package/dependencies/install.ts)_
 
 ## `sfdx texei:user:update`
 
@@ -81,5 +104,5 @@ EXAMPLES
   $ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"
 ```
 
-_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.2/src/commands/texei/user/update.ts)_
+_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.3/src/commands/texei/user/update.ts)_
 <!-- commandsstop -->
