@@ -63,7 +63,7 @@ _See code: [src/commands/texei/package/dependencies/install.ts](https://github.c
 
 ## `sfdx texei:sandbox:list`
 
-Updates the current user of a scratch org
+Tools for sandboxes (list, refresh...)
 
 ```
 USAGE

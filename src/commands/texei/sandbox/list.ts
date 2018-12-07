@@ -36,34 +36,35 @@ export default class List extends SfdxCommand {
 
     const values = this.flags.values;
 
-    // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
-    //const userName = this.org.getUsername();
+    // Define the query for retrieving Sandboxes informations
+    const query = "SELECT Id, SandboxName, Description, LicenseType FROM SandboxInfo";
+    const conn = this.org.getConnection();
 
-    // TODO: update to use jsforce ?
-    // https://jsforce.github.io/document/#update
-    //const updateUserCommand = `sfdx force:data:record:update -s User -w "UserName=${userName}" -v "${values}"`;
+  try {
+  //Define our ouput list
+  let output = [];
 
-    let result = [];
-    const conn = this.hubOrg.getConnection();
+  // Query the org
+  const result = await conn.tooling.query(query) as any;
 
-    try {
-
-      var sandboxList = {};
-conn.query("SELECT Id, DisplayName, MemberEntity, Instance, IsSandbox, OrgStatus, OrgEdition FROM EnvironmentHubMember WHERE OrgStatus != 'Deleted'ORDER BY DisplayName", function(err, result) {
-  if (err) { return console.error(err); }
-  for (var i = 0; i < result.totalSize; i++) {
-      console.log('id:' + result.records[i].Id, ' name: 'result.records[i].DisplayName, ' isSandbox: 'result.records[i].IsSandbox);
-  }
-});
-
-
+  // 
+  for (const record of result.records) {
+    // TODO: Add description and cut if too long ?
+    const sandboxInfo = {
+      id: record.Id,
+      name: record.SandboxName,
+      type: record.LicenseType
+      //description: record.Description
+    }
     
+    // Push result in ouput list
+    output.push(sandboxInfo);
+  }
 
+  // Show the list
+  this.ux.table(output, Object.keys(output[0]));
 
-      this.ux.table(sandboxList);
-    } catch (error) {
-
-      result = error.stderr;
+  } catch (error) {
 
 
       // Throw an error, sfdx library will manage the way to display it
