@@ -10,6 +10,7 @@ core.Messages.importMessagesDirectory(__dirname);
 const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'extract');
 
 const definitionFileName  = 'project-scratch-def.json';
+const settingValuesToIgnore =['Packaging2','ExpandedSourceTrackingPref','ScratchOrgManagementPref'];
 
 export default class Extract extends SfdxCommand {
 
@@ -47,7 +48,9 @@ export default class Extract extends SfdxCommand {
     //console.log(orgInfos);
     let definitionValues: any = {};
     definitionValues.orgName = orgInfos.records[0].Name;
+    definitionValues.edition = 'Developer';
     definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
+    definitionValues.settings = {};
 
     /*
     // TODO: find a way to get all these values
@@ -80,7 +83,7 @@ export default class Extract extends SfdxCommand {
 
         for (let meta of metadata) {
           const settingType = meta.fullName+meta.type;
-          console.log('METADATA TYPE: ' + settingType);
+          //console.log('METADATA TYPE: ' + settingType);
 
           // Querying settings details - Is there a way to do only 1 query with jsforce ?
           const settingPromise = conn.metadata.read(settingType, settingType);
@@ -93,8 +96,32 @@ export default class Extract extends SfdxCommand {
       // TODO: Write these in the file. - Is everything part of the scratch definition file ? For instance Business Hours ?
       // Upper camel case --> lower camel case ; ex: OmniChannelSettings --> omniChannelSettings
       console.log('Promises resolved');
-      console.log(settingValues);
+
+      for (const setting of settingValues) {
+        //fullName
+        //console.log(setting.fullName);
+        if (setting.fullName == 'OrgPreferenceSettings') {
+
+          const settingsName = this.toLowerCamelCase(setting.fullName);
+
+          let settingValues: any = {};
+          for (const subsetting of setting.preferences) {
+
+            if (!settingValuesToIgnore.includes(subsetting.settingName)) {
+              settingValues[this.toLowerCamelCase(subsetting.settingName)] = subsetting.settingValue as boolean;
+              let myValue = subsetting.settingValue as boolean;
+            }
+          }
+          //console.log(settingValues);
+          definitionValues.settings[settingsName] = settingValues;
+        }
+      }
+
+      //console.log(settingValues);
+      //definitionValues.orgName
     });
+
+    //console.log(definitionValues);
 
     // Write project-scratch-def.json file
     const saveToPath = path.join(
@@ -102,7 +129,7 @@ export default class Extract extends SfdxCommand {
       definitionFileName
     );
 
-    await fs.writeFile(saveToPath, JSON.stringify(definitionValues, null, 2), 'utf8', function (err) {
+    await fs.writeFile(saveToPath, this.removeQuotes(JSON.stringify(definitionValues, null, 2)), 'utf8', function (err) {
       if (err) {
           throw new core.SfdxError(`Unable to write definition file at path ${process.cwd()}: ${err}`);
       }
@@ -111,5 +138,16 @@ export default class Extract extends SfdxCommand {
 
     // Everything went fine, return an object that will be used for --json
     return { org: this.org.getOrgId(), message: orgInfos };
+  }
+
+  private toLowerCamelCase(label) {
+    return label.charAt(0).toLowerCase() + label.slice(1);
+  }
+
+  // Is there a better way to do this ?
+  private removeQuotes(myJson) {
+    myJson = myJson.replace(new RegExp('"true"', 'g'), true);
+    myJson = myJson.replace(new RegExp('"false"', 'g'), false);
+    return myJson;
   }
 }
