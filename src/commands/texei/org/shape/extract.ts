@@ -35,17 +35,11 @@ export default class Extract extends SfdxCommand {
 
   public async run(): Promise<any> {
 
-    const values = this.flags.values;
-
-    // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
-    const userName = this.org.getUsername();
-
     // Query org for org infos
     const query = 'Select Name, Country, LanguageLocaleKey, OrganizationType from Organization';
     const conn = this.org.getConnection();
     const orgInfos = await conn.query(query) as any;
 
-    //console.log(orgInfos);
     let definitionValues: any = {};
     definitionValues.orgName = orgInfos.records[0].Name;
     definitionValues.edition = 'Developer';
@@ -83,7 +77,6 @@ export default class Extract extends SfdxCommand {
 
         for (let meta of metadata) {
           const settingType = meta.fullName+meta.type;
-          //console.log('METADATA TYPE: ' + settingType);
 
           // Querying settings details - Is there a way to do only 1 query with jsforce ?
           const settingPromise = conn.metadata.read(settingType, settingType);
@@ -95,33 +88,26 @@ export default class Extract extends SfdxCommand {
     await Promise.all(settingPromises).then((settingValues) => {
       // TODO: Write these in the file. - Is everything part of the scratch definition file ? For instance Business Hours ?
       // Upper camel case --> lower camel case ; ex: OmniChannelSettings --> omniChannelSettings
-      console.log('Promises resolved');
 
       for (const setting of settingValues) {
-        //fullName
-        //console.log(setting.fullName);
+        // TODO: hardcoding an easy one to start, let's do one with a deeper hierarchy after
         if (setting.fullName == 'OrgPreferenceSettings') {
 
           const settingsName = this.toLowerCamelCase(setting.fullName);
-
           let settingValues: any = {};
           for (const subsetting of setting.preferences) {
 
             if (!settingValuesToIgnore.includes(subsetting.settingName)) {
-              settingValues[this.toLowerCamelCase(subsetting.settingName)] = subsetting.settingValue as boolean;
-              let myValue = subsetting.settingValue as boolean;
+              settingValues[this.toLowerCamelCase(subsetting.settingName)] = subsetting.settingValue;
             }
           }
-          //console.log(settingValues);
+
           definitionValues.settings[settingsName] = settingValues;
         }
       }
-
-      //console.log(settingValues);
-      //definitionValues.orgName
     });
 
-    //console.log(definitionValues);
+    // TODO: manage dependencies: for instance, setting "networksEnabled" requires "features":["Communities"]
 
     // Write project-scratch-def.json file
     const saveToPath = path.join(
