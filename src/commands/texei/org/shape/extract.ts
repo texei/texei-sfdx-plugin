@@ -12,6 +12,9 @@ const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'extract');
 const definitionFileName  = 'project-scratch-def.json';
 const settingValuesToIgnore =['Packaging2','ExpandedSourceTrackingPref','ScratchOrgManagementPref'];
 
+// TODO: manage dependencies correctly: for instance, setting "networksEnabled" requires "features":["Communities"]
+const featureDependencies = new Map<string, String>([['networksEnabled','Communities']]);
+
 export default class Extract extends SfdxCommand {
 
   public static description = messages.getMessage('commandDescription');
@@ -91,6 +94,10 @@ export default class Extract extends SfdxCommand {
 
       for (const setting of settingValues) {
         // TODO: hardcoding an easy one to start, let's do one with a deeper hierarchy after
+        // TODO: beware of settings like security and IP ranges ?
+        // TODO: manage dependencies on features
+        //console.log(featureDependencies.get('networksEnabled'));
+
         if (setting.fullName == 'OrgPreferenceSettings') {
 
           const settingsName = this.toLowerCamelCase(setting.fullName);
@@ -104,10 +111,16 @@ export default class Extract extends SfdxCommand {
 
           definitionValues.settings[settingsName] = settingValues;
         }
+
+        // TODO: another setting to test
+        if (setting.fullName == 'FileUploadAndDownloadSecuritySettings') {
+
+          const settingName = this.toLowerCamelCase(setting.fullName);
+          const formattedSetting = this.formatSetting(setting);
+          definitionValues.settings[settingName] = formattedSetting;
+        }
       }
     });
-
-    // TODO: manage dependencies: for instance, setting "networksEnabled" requires "features":["Communities"]
 
     // Write project-scratch-def.json file
     const saveToPath = path.join(
@@ -123,7 +136,7 @@ export default class Extract extends SfdxCommand {
     this.ux.log(`Definition file saved!`);
 
     // Everything went fine, return an object that will be used for --json
-    return { org: this.org.getOrgId(), message: orgInfos };
+    return { org: this.org.getOrgId(), message: definitionValues };
   }
 
   private toLowerCamelCase(label) {
@@ -134,6 +147,14 @@ export default class Extract extends SfdxCommand {
   private removeQuotes(myJson) {
     myJson = myJson.replace(new RegExp('"true"', 'g'), true);
     myJson = myJson.replace(new RegExp('"false"', 'g'), false);
+    return myJson;
+  }
+
+  private formatSetting(myJson) {
+
+    const settingName = this.toLowerCamelCase(myJson.fullName);
+    delete myJson.fullName;
+
     return myJson;
   }
 }
