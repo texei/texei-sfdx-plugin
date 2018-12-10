@@ -1,4 +1,5 @@
 import { core, SfdxCommand, flags } from '@salesforce/command';
+
 var exec = require('child-process-promise').exec;
 
 // Initialize Messages with the current plugin directory
@@ -14,6 +15,9 @@ export default class Create extends SfdxCommand {
 
   public static examples = [
     `$ sfdx texei:sandbox:create --targetusername myOrg@example.com --name SandboxName`,
+    `$ sfdx texei:sandbox:create --targetusername myOrg@example.com --name SandboxName --LicenseType DEVELOPER DEVELOPER_PRO PARTIAL FULL`,
+    `$ sfdx texei:sandbox:create --targetusername myOrg@example.com --name SandboxName --confirmed true/false` ,
+
   ];
 
   //public static args = [{ name: 'file' }];
@@ -21,6 +25,7 @@ export default class Create extends SfdxCommand {
   protected static flagsConfig = {
     // TODO: add flag for time color to warn refresh
     name: flags.string({ char: 'n', description: 'Enter the name of your new Sandbox', required: true }),
+    licensetype: flags.string({ char: 'l', description: 'Enter the licenceType of the Sandbox (d: dev, dp: dev pro, p: partial, f: full', required: true}),
     confirmed: { type: 'boolean',  char: 'c', description: 'Auto-confirm Sandbox creation'}
   };
 
@@ -39,15 +44,24 @@ export default class Create extends SfdxCommand {
 
     // Define the query for retrieving Sandboxes informations
     //const query = "SELECT Id, SandboxName, Description, LicenseType FROM SandboxInfo";
-    //const conn = this.org.getConnection();
+    const conn = this.org.getConnection();
 
   try {
 
   if (this.flags.name) {
     this.flags.confirmed = await this.ux.confirm('Are you sure to create a sandbox named ' + this.flags.name + '? (Y/n)');
   }
+  if (this.flags.licensetype) {
+    this.flags.licensetype = await this.ux.confirm('Are you sure to create a "' + this.flags.licensetype + '" sandbox ? (Y/n)');
+  }
 
-  console.log('confirmer : ', this.flags.confirmed);
+if (this.flags.confirmed && this.flags.licensetype) {
+const lol = await conn.tooling.sobject("SandboxInfo").create({ SandboxName : this.flags.name,  LicenseType: this.flags.licensetype.toUpperCase( )}, function(err, ret) {
+if (err) { return console.error(err, ret); }
+console.log("Your sandbox named : " + this.flags.name + "is queued to be created");
+// ...
+});
+}
  
 
   } catch (error) {
