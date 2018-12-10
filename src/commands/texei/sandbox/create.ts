@@ -6,21 +6,22 @@ core.Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'list');
+const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'create');
 
-export default class List extends SfdxCommand {
+export default class Create extends SfdxCommand {
 
   public static description = messages.getMessage('commandDescription');
 
   public static examples = [
-    `$ sfdx texei:sandbox:list --targetusername myOrg@example.com`,
+    `$ sfdx texei:sandbox:create --targetusername myOrg@example.com --name SandboxName`,
   ];
 
   //public static args = [{ name: 'file' }];
 
   protected static flagsConfig = {
     // TODO: add flag for time color to warn refresh
-    //list: flags.string({ char: 'l', description: messages.getMessage('valuesFlagDescription') })
+    name: flags.string({ char: 'n', description: 'Enter the name of your new Sandbox', required: true }),
+    confirmed: { type: 'boolean',  char: 'c', description: 'Auto-confirm Sandbox creation'}
   };
 
   // Comment this out if your command does not require an org username
@@ -34,35 +35,20 @@ export default class List extends SfdxCommand {
 
   public async run(): Promise<any> {
 
-    //const values = this.flags.values;
+    const values = this.flags.values;
 
     // Define the query for retrieving Sandboxes informations
-    const query = "SELECT Id, SandboxName, Description, LicenseType FROM SandboxInfo";
-    const conn = this.org.getConnection();
+    //const query = "SELECT Id, SandboxName, Description, LicenseType FROM SandboxInfo";
+    //const conn = this.org.getConnection();
 
   try {
-  //Define our ouput list
-  let output = [];
 
-  // Query the org
-  const result = await conn.tooling.query(query) as any;
-
-  // 
-  for (const record of result.records) {
-    // TODO: Add description and cut if too long ?
-    const sandboxInfo = {
-      id: record.Id,
-      name: record.SandboxName,
-      type: record.LicenseType
-      //description: record.Description
-    }
-
-    // Push result in ouput list
-    output.push(sandboxInfo);
+  if (this.flags.name) {
+    this.flags.confirmed = await this.ux.confirm('Are you sure to create a sandbox named ' + this.flags.name + '? (Y/n)');
   }
 
-  // Show the list
-  this.ux.table(output, Object.keys(output[0]));
+  console.log('confirmer : ', this.flags.confirmed);
+ 
 
   } catch (error) {
 
@@ -72,6 +58,6 @@ export default class List extends SfdxCommand {
     }
 
     // Everything went fine, return an object that will be used for --json
-    return ;//{ org: this.org.getOrgId(), message: result };
+    return;// { org: this.org.getOrgId(), message: result };
   }
 }
