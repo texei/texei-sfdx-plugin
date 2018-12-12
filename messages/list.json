@@ -1,0 +1,6 @@
+{
+  "commandDescription": "Tools for sandboxes (list, refresh...) ",
+  "valuesFlagDescription": "the <fieldName>=<value> pairs you’re updating",
+  "errorNoOrgResults": "No results found for the organization '%s'.",
+  "list":"valuesFlagDescription"
+}
