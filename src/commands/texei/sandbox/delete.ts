@@ -1,5 +1,4 @@
 import { core, SfdxCommand, flags } from '@salesforce/command';
-import { Aliases } from '@salesforce/core';
 
 // Initialize Messages with the current plugin directory
 core.Messages.importMessagesDirectory(__dirname);
