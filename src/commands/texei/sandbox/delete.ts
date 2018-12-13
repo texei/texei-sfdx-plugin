@@ -69,7 +69,7 @@ export default class Delete extends SfdxCommand {
         isConfirmed = true;
       }
       else {
-        await this.ux.confirm('Delete Sandbox named: '+sandboxName+' for Org: '+orgLabel+'? Are you sure (y/n)?');
+        isConfirmed = await this.ux.confirm('Delete Sandbox named: '+sandboxName+' for Org: '+orgLabel+'? Are you sure (y/n)?');
       }
 
       if (isConfirmed) {
