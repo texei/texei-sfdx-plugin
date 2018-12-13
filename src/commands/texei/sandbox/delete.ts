@@ -32,7 +32,7 @@ export default class Delete extends SfdxCommand {
   public async run(): Promise<any> {
 
     let sandbox = {} as any;
-    sandbox.status = 'not deleted';
+    sandbox.success = false;
 
     const sandboxName = this.flags.sandboxname;
 
@@ -78,7 +78,7 @@ export default class Delete extends SfdxCommand {
 
         if (deletionResult.success) {
           this.ux.log(messages.getMessage('sandboxDeleted'));
-          sandbox.status = 'deleted';
+          sandbox.success = true;
         }
         else {
           throw new core.SfdxError(deletionResult.errors);
