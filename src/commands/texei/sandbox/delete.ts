@@ -1,4 +1,5 @@
 import { core, SfdxCommand, flags } from '@salesforce/command';
+import { Aliases } from '@salesforce/core';
 
 // Initialize Messages with the current plugin directory
 core.Messages.importMessagesDirectory(__dirname);
@@ -18,7 +19,8 @@ export default class Delete extends SfdxCommand {
   ];
 
   protected static flagsConfig = {
-    sandboxname: flags.string({ char: 's', required: true, description: messages.getMessage('sandboxnameFlagDescription') })
+    sandboxname: flags.string({ char: 's', required: true, description: messages.getMessage('sandboxnameFlagDescription') }),
+    noprompt: { char: 'p', type: 'boolean', default: false, description: messages.getMessage('noPromptFlagDescription') }
   };
 
   // Comment this out if your command does not require an org username
@@ -29,6 +31,9 @@ export default class Delete extends SfdxCommand {
 
   public async run(): Promise<any> {
 
+    let sandbox = {} as any;
+    sandbox.status = 'not deleted';
+
     const sandboxName = this.flags.sandboxname;
 
     // Look for a sandbox with the provided name
@@ -37,25 +42,43 @@ export default class Delete extends SfdxCommand {
 
     try {
 
-      // Query the org
-      const result = await conn.tooling.query(query) as any;
+      // Get alias for better display
+      const aliasesMap = await Aliases.retrieve();
+      const currentAlias = aliasesMap.getKeysByValue(this.org.getUsername());
 
-      if (result.size == 0) {
+      let orgLabel = this.org.getUsername();
+      if (currentAlias && currentAlias.length != 0) {
+        orgLabel = currentAlias+' ('+orgLabel+')';
+      }
+
+      // Query the org
+      const queryResult = await conn.tooling.query(query) as any;
+
+      if (queryResult.size == 0) {
         // No Sandbox found
-        const errorMessage = 'Could not find any Sandbox named '+sandboxName+' for '+this.org.getUsername();
+        const errorMessage = 'Could not find any Sandbox named: '+sandboxName+' for Org: '+orgLabel;
         throw new core.SfdxError(errorMessage);
       }
 
+      const sandboxId = queryResult.records[0].Id;
+      sandbox.orgId = sandboxId;
+
       // Sandbox found, confirm we want to delete it
-      const isConfirmed = await this.ux.confirm('Delete Sandbox named: '+sandboxName+' for '+this.org.getUsername()+' ? Are you sure (y/n) ?');
+      let isConfirmed = false;
+      if (this.flags.noprompt) {
+        isConfirmed = true;
+      }
+      else {
+        await this.ux.confirm('Delete Sandbox named: '+sandboxName+' for Org: '+orgLabel+'? Are you sure (y/n)?');
+      }
 
       if (isConfirmed) {
         // Delete the Sandbox
-        const sandboxId = result.records[0].Id;
         const deletionResult = await conn.tooling.sobject('SandboxInfo').delete(sandboxId) as any;
 
         if (deletionResult.success) {
           this.ux.log(messages.getMessage('sandboxDeleted'));
+          sandbox.status = 'deleted';
         }
         else {
           throw new core.SfdxError(deletionResult.errors);
@@ -75,6 +98,6 @@ export default class Delete extends SfdxCommand {
     }
 
     // Everything went fine, return an object that will be used for --json
-    return { org: this.org.getOrgId() };
+    return { sandbox };
   }
 }

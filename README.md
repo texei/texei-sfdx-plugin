@@ -70,6 +70,7 @@ USAGE
   $ sfdx texei:sandbox:delete
 
 OPTIONS
+  -p, --noprompt                                  no prompt to confirm deletion
   -s, --sandboxname=sandboxname                   (required) Name of the Sandbox to delete
   -u, --targetusername=targetusername             username or alias for the target org; overrides default target org
   --apiversion=apiversion                         override the api version used for api requests made by this command

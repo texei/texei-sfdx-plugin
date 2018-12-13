@@ -1,6 +1,7 @@
 {
   "commandDescription": "Delete a Sandbox",
   "sandboxnameFlagDescription": "Name of the Sandbox to delete",
+  "noPromptFlagDescription": "no prompt to confirm deletion",
   "noSandboxInfo": "Could not find any Sandbox information, you likely targeted a non Production org",
   "sandboxDeleted": "Sandbox successfully deleted!"
 }
