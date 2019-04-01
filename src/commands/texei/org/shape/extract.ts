@@ -10,7 +10,9 @@ core.Messages.importMessagesDirectory(__dirname);
 const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'extract');
 
 const definitionFileName  = 'project-scratch-def.json';
-const settingValuesToIgnore =['Packaging2','ExpandedSourceTrackingPref','ScratchOrgManagementPref'];
+const settingValuesToIgnore =['Packaging2','ExpandedSourceTrackingPref','ScratchOrgManagementPref','ShapeExportPref',
+                              'PRMAccRelPref','allowUsersToRelateMultipleContactsToTasksAndEvents','socialCustomerServiceSettings',
+                              'opportunityFilterSettings'];
 
 // TODO: manage dependencies correctly: for instance, setting "networksEnabled" requires "features":["Communities"]
 const featureDependencies = new Map<string, String>([['networksEnabled','Communities']]);
@@ -43,11 +45,10 @@ export default class Extract extends SfdxCommand {
     const conn = this.org.getConnection();
     const orgInfos = await conn.query(query) as any;
 
+    let featureList: any = [];
     let definitionValues: any = {};
-    definitionValues.orgName = orgInfos.records[0].Name;
-    definitionValues.edition = 'Developer';
-    definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
-    definitionValues.settings = {};
+    let definitionValuesTemp: any = {};
+    definitionValuesTemp.settings = {};
 
     /*
     // TODO: find a way to get all these values
@@ -98,6 +99,7 @@ export default class Extract extends SfdxCommand {
         // TODO: manage dependencies on features
         //console.log(featureDependencies.get('networksEnabled'));
 
+        // For whatever reason, this setting has not the same format as others
         if (setting.fullName == 'OrgPreferenceSettings') {
 
           const settingsName = this.toLowerCamelCase(setting.fullName);
@@ -105,21 +107,96 @@ export default class Extract extends SfdxCommand {
           for (const subsetting of setting.preferences) {
 
             if (!settingValuesToIgnore.includes(subsetting.settingName)) {
-              settingValues[this.toLowerCamelCase(subsetting.settingName)] = subsetting.settingValue;
+
+              const settingName = this.toLowerCamelCase(subsetting.settingName);
+              settingValues[settingName] = subsetting.settingValue;
+
+              // Checking if there is a feature dependency
+              if (featureDependencies.has(settingName)) {
+                featureList.push(featureDependencies.get(settingName));
+              }
             }
           }
 
-          definitionValues.settings[settingsName] = settingValues;
+          definitionValuesTemp.settings[settingsName] = settingValues;
         }
 
-        // TODO: another setting to test
-        if (setting.fullName == 'FileUploadAndDownloadSecuritySettings') {
+        // TODO: some other settings to test
+        const settingsToTest = ['AccountSettings',
+                                'ActivitiesSettings',
+                                'AddressSettings',
+                                'BusinessHoursSettings',
+                                'CaseSettings',
+                                'CompanySettings',
+                                'ContractSettings',
+                                'EntitlementSettings',
+                                'FileUploadAndDownloadSecuritySettings',
+                                'IdeasSettings',
+                                'MacroSettings',
+                                'MobileSettings',
+                                'NameSettings',
+                                'OmniChannelSettings',
+                                'OpportunitySettings',
+                                'OrderSettings',
+                                'PathAssistantSettings',
+                                'ProductSettings',
+                                'QuoteSettings',
+                                'SearchSettings',
+                                'SecuritySettings',
+                                'SocialCustomerServiceSettings',
+                                'Territory2Settings',
+                                'OrgPreferenceSettings'];
+        // ForecastingSettings
+
+        const settingsToTest2 = ['AccountSettings',
+                                 'ActivitiesSettings',
+                                 'BusinessHoursSettings',
+                                 'CaseSettings',
+                                 'CompanySettings',
+                                 'ContractSettings',
+                                 'EntitlementSettings',
+                                 'FileUploadAndDownloadSecuritySettings',
+                                 'IdeasSettings',
+                                 'MacroSettings',
+                                 'MobileSettings',
+                                 'NameSettings',
+                                 'OmniChannelSettings',
+                                 'OpportunitySettings',
+                                 'OrderSettings',
+                                 'PathAssistantSettings',
+                                 'ProductSettings',
+                                 'QuoteSettings',
+                                 'SearchSettings',
+                                 'SecuritySettings',
+                                 'SocialCustomerServiceSettings'];
+
+        if (settingsToTest2.includes(setting.fullName)) {
 
           const settingName = this.toLowerCamelCase(setting.fullName);
-          const formattedSetting = this.formatSetting(setting);
-          definitionValues.settings[settingName] = formattedSetting;
+          if (!settingValuesToIgnore.includes(settingName)) {
+            const formattedSetting = this.formatSetting(setting);
+
+            // All this code to ignore values should be refactored in a better way, todo
+            for (var property in setting) {
+              if (setting.hasOwnProperty(property) && settingValuesToIgnore.includes(property)) {
+                delete setting[property];
+              }
+            }
+
+            definitionValuesTemp.settings[settingName] = formattedSetting;
+          }
         }
       }
+
+      // Construct the object with all values
+      definitionValues.orgName = orgInfos.records[0].Name;
+      definitionValues.edition = 'Developer';
+      definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
+      // Adding features if needed
+      if (featureList.length > 0) {
+        definitionValues.features = featureList;
+      }
+      definitionValues.settings = definitionValuesTemp.settings;
     });
 
     // Write project-scratch-def.json file
