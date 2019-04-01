@@ -1,8 +1,5 @@
 import { core, SfdxCommand, flags } from '@salesforce/command';
-import { watchFile } from 'fs';
-const exec = require('child-process-promise').exec;
 const spawn = require('child-process-promise').spawn;
-const _ = require('underscore');
 
 const packageIdPrefix = '0Ho';
 const packageVersionIdPrefix = '04t';
@@ -27,6 +24,7 @@ export default class Install extends SfdxCommand {
   protected static flagsConfig = {
     installationkeys: { char: 'k', required: false, description: 'installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)' },
     branch: { char: 'b', required: false, description: 'the package version’s branch' },
+    packages: { char: 'p', required: false, description: "comma-separated list of the packages to install related dependencies" },
     namespaces: { char: 'n', required: false, description: 'filter package installation by namespace' },
     wait: { char: 'w', type: 'number', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' },
     noprompt: { char: 'r', required: false, type: 'boolean', description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' }
@@ -48,6 +46,10 @@ export default class Install extends SfdxCommand {
     const username = this.org.getUsername();
     const project = await core.SfdxProjectJson.retrieve<core.SfdxProjectJson>();
 
+    if (this.flags.packages != null) {
+      this.ux.log('Filtering by packages: ' + this.flags.packages);
+    }
+
     if (this.flags.namespaces != null) {
       this.ux.log('Filtering by namespaces: ' + this.flags.namespaces);
     }
@@ -64,41 +66,66 @@ export default class Install extends SfdxCommand {
     const packagesToInstall = [];
 
     const packageDirectories = project.get('packageDirectories') as core.JsonArray || [];
+    const packages = new Set();
+    if (this.flags.packages) {
+      for (let pkg of this.flags.packages.split(',')) {
+          packages.add(pkg.trim());
+      }
+    }
 
     this.ux.startSpinner('Resolving dependencies');
 
     for (let packageDirectory of packageDirectories) {
       packageDirectory = packageDirectory as core.JsonMap;
+      const packageName = (packageDirectory.package && packageDirectory.package.toString()) ? packageDirectory.package.toString() : '';
 
-      const dependencies = packageDirectory.dependencies || [];
+      // If the package is found, or if there isn't any package filtering
+      if (packages.has(packageName) || packages.size == 0) {
 
-      // TODO: Move all labels to message
-      if (dependencies && dependencies[0] !== undefined) {
-        this.ux.log(`\nPackage dependencies found for package directory ${packageDirectory.path}`);
-        for (const dependency of (dependencies as core.JsonArray)) {
+        const dependencies = packageDirectory.dependencies || [];
 
-          const packageInfo = { } as core.JsonMap;
+        // TODO: Move all labels to message
+        if (dependencies && dependencies[0] !== undefined) {
+          this.ux.log(`\nPackage dependencies found for package directory ${packageDirectory.path}`);
+          for (const dependency of (dependencies as core.JsonArray)) {
 
-          const dependencyInfo = dependency as core.JsonMap;
-          const dependentPackage: string = ((dependencyInfo.packageId != null) ? dependencyInfo.packageId : dependencyInfo.package) as string;
-          const versionNumber: string = (dependencyInfo.versionNumber) as string;
-          const namespaces: string[] = this.flags.namespaces !== undefined ? this.flags.namespaces.split(',') : null;
+            const packageInfo = { } as core.JsonMap;
 
-          if (dependentPackage == null) {
-            throw Error('Dependent package version unknow error.');
+            const dependencyInfo = dependency as core.JsonMap;
+            const dependentPackage: string = ((dependencyInfo.packageId != null) ? dependencyInfo.packageId : dependencyInfo.package) as string;
+            const versionNumber: string = (dependencyInfo.versionNumber) as string;
+            const namespaces: string[] = this.flags.namespaces !== undefined ? this.flags.namespaces.split(',') : null;
+
+            if (dependentPackage == null) {
+              throw Error('Dependent package version unknow error.');
+            }
+
+            packageInfo.dependentPackage = dependentPackage;
+            packageInfo.versionNumber = versionNumber;
+            const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber, namespaces);
+            if (packageVersionId != null) {
+              packageInfo.packageVersionId = packageVersionId;
+              packagesToInstall.push( packageInfo );
+              this.ux.log(`    ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber === undefined ? '' : ' ' + packageInfo.versionNumber }`);
+            }
           }
-
-          packageInfo.dependentPackage = dependentPackage;
-          packageInfo.versionNumber = versionNumber;
-          const packageVersionId = await this.getPackageVersionId(dependentPackage, versionNumber, namespaces);
-          if (packageVersionId != null) {
-            packageInfo.packageVersionId = packageVersionId;
-            packagesToInstall.push( packageInfo );
-            this.ux.log( `    ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber === undefined ? '' : ' ' + packageInfo.versionNumber }`);
-          }
+        } else {
+          this.ux.log(`\nNo dependencies found for package directory ${packageDirectory.path}`);
         }
-      } else {
-        this.ux.log(`\nNo dependencies found for package directory ${packageDirectory.path}`);
+
+        // Removing package from packages flag list --> Used later to log if one of them wasn't found
+        if (packages && packages.has(packageName)) {
+          packages.delete(packageName);
+        }
+      }
+    }
+
+    // In case one package wasn't found when filtering by packages
+    if (packages && packages.size > 0) {
+      this.ux.log(`\nFollowing packages were used in the --packages flag but were not found in the packageDirectories:`);
+
+      for (let packageName of packages) {
+        this.ux.log(`    ${packageName}`);
       }
     }
 
