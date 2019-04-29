@@ -12,7 +12,8 @@ const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'extract');
 const definitionFileName  = 'project-scratch-def.json';
 const settingValuesToIgnore =['Packaging2','ExpandedSourceTrackingPref','ScratchOrgManagementPref','ShapeExportPref',
                               'PRMAccRelPref','allowUsersToRelateMultipleContactsToTasksAndEvents','socialCustomerServiceSettings',
-                              'opportunityFilterSettings'];
+                              'opportunityFilterSettings','enableAccountOwnerReport','defaultCaseOwner','PortalUserShareOnCase',
+                              'keepRecordTypeOnAssignmentRule','emailToCase','webToCase'];
 
 // TODO: manage dependencies correctly: for instance, setting "networksEnabled" requires "features":["Communities"]
 const featureDependencies = new Map<string, String>([['networksEnabled','Communities']]);
@@ -121,35 +122,28 @@ export default class Extract extends SfdxCommand {
           definitionValuesTemp.settings[settingsName] = settingValues;
         }
 
-        // TODO: some other settings to test
-        const settingsToTest = ['AccountSettings',
-                                'ActivitiesSettings',
-                                'AddressSettings',
-                                'BusinessHoursSettings',
-                                'CaseSettings',
-                                'CompanySettings',
-                                'ContractSettings',
-                                'EntitlementSettings',
-                                'FileUploadAndDownloadSecuritySettings',
-                                'IdeasSettings',
-                                'MacroSettings',
-                                'MobileSettings',
-                                'NameSettings',
-                                'OmniChannelSettings',
-                                'OpportunitySettings',
-                                'OrderSettings',
-                                'PathAssistantSettings',
-                                'ProductSettings',
-                                'QuoteSettings',
-                                'SearchSettings',
-                                'SecuritySettings',
-                                'SocialCustomerServiceSettings',
-                                'Territory2Settings',
-                                'OrgPreferenceSettings'];
+        // FIXME: Lots of settings have errors (for instance linked to metadata)
         // ForecastingSettings
+        // Error  shape/settings/Forecasting.settings  Forecasting  Cannot resolve Forecasting Type from name or attributes
 
-        const settingsToTest2 = ['AccountSettings',
+        // searchSettings (Includes custom objects not there yet)
+        // Error  shape/settings/Search.settings  Search  Entity is null or entity element's name is null
+
+        // Territory2Settings
+        // Error  shape/settings/Territory2.settings   Territory2   Not available for deploy for this organization
+
+        // Error  shape/settings/Account.settings        Account        You cannot set a value for enableAccountOwnerReport unless your organization-wide sharing access level for Accounts is set to Private.
+        
+        // Error  shape/settings/Case.settings           Case           CaseSettings: There are no record types defined for Case.
+        // Error  shape/settings/Case.settings  Case  CaseSettings: Specify the default case user.
+        // Error  shape/settings/Case.settings  Case  In field: caseOwner - no Queue named myQueue found
+        // Error  shape/settings/Case.settings  Case  WebToCaseSettings: Invalid caseOrigin Formulaire
+        
+        // Error  shape/settings/OrgPreference.settings  OrgPreference  You do not have sufficient rights to access the organization setting: PortalUserShareOnCase
+        
+        const settingsToTest = ['AccountSettings',
                                  'ActivitiesSettings',
+                                 'AddressSettings',
                                  'BusinessHoursSettings',
                                  'CaseSettings',
                                  'CompanySettings',
@@ -166,11 +160,10 @@ export default class Extract extends SfdxCommand {
                                  'PathAssistantSettings',
                                  'ProductSettings',
                                  'QuoteSettings',
-                                 'SearchSettings',
                                  'SecuritySettings',
                                  'SocialCustomerServiceSettings'];
 
-        if (settingsToTest2.includes(setting.fullName)) {
+        if (settingsToTest.includes(setting.fullName)) {
 
           const settingName = this.toLowerCamelCase(setting.fullName);
           if (!settingValuesToIgnore.includes(settingName)) {
@@ -199,10 +192,21 @@ export default class Extract extends SfdxCommand {
       definitionValues.settings = definitionValuesTemp.settings;
     });
 
+    // If a path was specified, add it
+    // TODO: create directory if it doesn't exists, maybe via a flag ?
+    // https://stackoverflow.com/questions/13542667/create-directory-when-writing-to-file-in-node-js
+    let filePath = definitionFileName;
+    if (this.flags.outputdir) {
+      filePath = path.join(
+        this.flags.outputdir,
+        definitionFileName
+      );
+    }
+    
     // Write project-scratch-def.json file
     const saveToPath = path.join(
       process.cwd(),
-      definitionFileName
+      filePath
     );
 
     await fs.writeFile(saveToPath, this.removeQuotes(JSON.stringify(definitionValues, null, 2)), 'utf8', function (err) {
