@@ -14,21 +14,20 @@
     "child-process-promise": "^2.2.1"
   },
   "devDependencies": {
-    "@oclif/dev-cli": "1",
-    "@oclif/plugin-help": "1",
-    "@oclif/test": "1",
-    "@salesforce/dev-config": "1.0.4",
-    "@types/chai": "4",
-    "@types/jsforce": "1.8.9",
-    "@types/mocha": "5",
-    "@types/node": "9",
-    "chai": "4",
-    "globby": "8",
-    "mocha": "5",
-    "sinon": "5",
-    "ts-node": "5",
-    "tslib": "1",
-    "typescript": "2.8"
+    "@oclif/dev-cli": "^1",
+    "@oclif/plugin-help": "^2",
+    "@oclif/test": "^1",
+    "@salesforce/dev-config": "1.4.1",
+    "@types/chai": "^4",
+    "@types/mocha": "^5",
+    "@types/node": "^10",
+    "chai": "^4",
+    "globby": "^8",
+    "mocha": "^5",
+    "nyc": "^13",
+    "ts-node": "^8",
+    "tslint": "^5",
+    "typescript": "~3.3"
   },
   "engines": {
     "node": ">=8.0.0"
