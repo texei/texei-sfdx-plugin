@@ -46,7 +46,7 @@ export default class Update extends SfdxCommand {
     let result = '';
     try {
 
-      const { stdout, stderr } = await exec(updateUserCommand);
+      const { stdout } = await exec(updateUserCommand);
       result = stdout;
 
       // Remove line breaks from string
