@@ -1,4 +1,6 @@
-import { core, SfdxCommand, flags } from '@salesforce/command';
+import { flags, SfdxCommand } from '@salesforce/command';
+import { JsonArray, JsonMap } from '@salesforce/ts-types';
+import { Messages, SfdxProjectJson, SfdxError } from '@salesforce/core';
 const spawn = require('child-process-promise').spawn;
 
 const packageIdPrefix = '0Ho';
@@ -7,11 +9,11 @@ const packageAliasesMap = [];
 const defaultWait = 10;
 
 // Initialize Messages with the current plugin directory
-core.Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'install');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'install');
 
 export default class Install extends SfdxCommand {
 
@@ -22,12 +24,12 @@ export default class Install extends SfdxCommand {
   ];
 
   protected static flagsConfig = {
-    installationkeys: { char: 'k', required: false, description: 'installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)' },
-    branch: { char: 'b', required: false, description: 'the package version’s branch' },
-    packages: { char: 'p', required: false, description: "comma-separated list of the packages to install related dependencies" },
-    namespaces: { char: 'n', required: false, description: 'filter package installation by namespace' },
-    wait: { char: 'w', type: 'number', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' },
-    noprompt: { char: 'r', required: false, type: 'boolean', description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' }
+    installationkeys: flags.string({ char: 'k', required: false, description: 'installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)' }),
+    branch: flags.string({ char: 'b', required: false, description: 'the package version’s branch' }),
+    packages: flags.string({ char: 'p', required: false, description: "comma-separated list of the packages to install related dependencies" }),
+    namespaces: flags.string({ char: 'n', required: false, description: 'filter package installation by namespace' }),
+    wait: flags.number({ char: 'w', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' }),
+    noprompt: flags.boolean({ char: 'r', required: false, description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' })
   };
 
   // Comment this out if your command does not require an org username
@@ -44,7 +46,8 @@ export default class Install extends SfdxCommand {
     const result = { installedPackages: {} };
 
     const username = this.org.getUsername();
-    const project = await core.SfdxProjectJson.retrieve<core.SfdxProjectJson>();
+    const options = SfdxProjectJson.getDefaultOptions();
+    const project = await SfdxProjectJson.create(options);
 
     if (this.flags.packages != null) {
       this.ux.log('Filtering by packages: ' + this.flags.packages);
@@ -65,7 +68,7 @@ export default class Install extends SfdxCommand {
     // Getting Package
     const packagesToInstall = [];
 
-    const packageDirectories = project.get('packageDirectories') as core.JsonArray || [];
+    const packageDirectories = project.get('packageDirectories') as JsonArray || [];
     const packages = new Set();
     if (this.flags.packages) {
       for (let pkg of this.flags.packages.split(',')) {
@@ -76,7 +79,7 @@ export default class Install extends SfdxCommand {
     this.ux.startSpinner('Resolving dependencies');
 
     for (let packageDirectory of packageDirectories) {
-      packageDirectory = packageDirectory as core.JsonMap;
+      packageDirectory = packageDirectory as JsonMap;
       const packageName = (packageDirectory.package && packageDirectory.package.toString()) ? packageDirectory.package.toString() : '';
 
       // If the package is found, or if there isn't any package filtering
@@ -86,12 +89,12 @@ export default class Install extends SfdxCommand {
 
         // TODO: Move all labels to message
         if (dependencies && dependencies[0] !== undefined) {
-          this.ux.log(`\nPackage dependencies found for package directory ${packageDirectory.path}`);
-          for (const dependency of (dependencies as core.JsonArray)) {
+          this.ux.log(`Package dependencies found for package directory ${packageDirectory.path}`);
+          for (const dependency of (dependencies as JsonArray)) {
 
-            const packageInfo = { } as core.JsonMap;
+            const packageInfo = { } as JsonMap;
 
-            const dependencyInfo = dependency as core.JsonMap;
+            const dependencyInfo = dependency as JsonMap;
             const dependentPackage: string = ((dependencyInfo.packageId != null) ? dependencyInfo.packageId : dependencyInfo.package) as string;
             const versionNumber: string = (dependencyInfo.versionNumber) as string;
             const namespaces: string[] = this.flags.namespaces !== undefined ? this.flags.namespaces.split(',') : null;
@@ -110,7 +113,7 @@ export default class Install extends SfdxCommand {
             }
           }
         } else {
-          this.ux.log(`\nNo dependencies found for package directory ${packageDirectory.path}`);
+          this.ux.log(`No dependencies found for package directory ${packageDirectory.path}`);
         }
 
         // Removing package from packages flag list --> Used later to log if one of them wasn't found
@@ -122,7 +125,7 @@ export default class Install extends SfdxCommand {
 
     // In case one package wasn't found when filtering by packages
     if (packages && packages.size > 0) {
-      this.ux.log(`\nFollowing packages were used in the --packages flag but were not found in the packageDirectories:`);
+      this.ux.log(`Following packages were used in the --packages flag but were not found in the packageDirectories:`);
 
       for (let packageName of packages) {
         this.ux.log(`    ${packageName}`);
@@ -147,7 +150,7 @@ export default class Install extends SfdxCommand {
             installationKeys[keyIndex] = key.substring(2);
           } else {
             // Format is not correct, throw an error
-            throw new core.SfdxError('Installation Key should have this format: 1:MyPackage1Key 2: 3:MyPackage3Key');
+            throw new SfdxError('Installation Key should have this format: 1:MyPackage1Key 2: 3:MyPackage3Key');
           }
         }
       }
@@ -156,7 +159,7 @@ export default class Install extends SfdxCommand {
 
       let i = 0;
       for (let packageInfo of packagesToInstall) {
-        packageInfo = packageInfo as core.JsonMap;
+        packageInfo = packageInfo as JsonMap;
         if (result.installedPackages.hasOwnProperty(packageInfo.packageVersionId)) {
           this.ux.log(`PackageVersionId ${packageInfo.packageVersionId} already installed. Skipping...`);
           continue;
@@ -193,7 +196,7 @@ export default class Install extends SfdxCommand {
         }
 
         // INSTALL PACKAGE
-        // TODO: How to add a debug flag or write to sfdx.log with --loglevel ?
+        // TODO: Fix waiting messages that should not be visibile with --json
         this.ux.log(`Installing package ${packageInfo.packageVersionId} : ${packageInfo.dependentPackage}${ packageInfo.versionNumber === undefined ? '' : ' ' + packageInfo.versionNumber }`);
         await spawn('sfdx', args, { stdio: 'inherit' });
 
