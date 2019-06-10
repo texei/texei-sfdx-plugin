@@ -49,47 +49,28 @@ export default class Clean extends SfdxCommand {
 
     // Get profiles files path
     if (this.flags.path) {
+
       // If path was provided as a flag use it/them
       const paths = this.flags.path.split(',');
-      console.log('PATHS: ', paths);
 
       for (const currentPath of paths) {
 
         if (currentPath.endsWith('.profile-meta.xml')) {
           // Well, this should be a profile
           // Otherwise you have a weird folder naming convention, you should probably stop this
-
+          profilesToClean.push(currentPath);
+        }
+        else {
+          // Flag provided value doesn't end like a Profile source metadata
+          // Expect it's a folder
+          profilesToClean = await this.getProfilesInPath(currentPath);
         }
       }
-
     }
     else {
-      // Else look at the default package directory in sfdx-project.json
-      const options = SfdxProjectJson.getDefaultOptions();
-      const project = await SfdxProjectJson.create(options);
-      const packageDirectories = project.get('packageDirectories') as JsonArray || [];
-      
-      for (let packageDirectory of packageDirectories) {
-        packageDirectory = packageDirectory as JsonMap;
-
-        if (packageDirectory.path && packageDirectory.default) {
-          
-          const dirPath = path.join(
-            packageDirectory.path as string,
-            'main',
-            'default',
-            'profiles'
-          );
-
-          profilesToClean = await this.getProfilesInPath(dirPath);
-          break;
-        }
-      }
-
-      // If none of these can be found, use the default force-app/main/default/profiles folder
-      if (profilesToClean.length == 0) {
-        profilesToClean = await this.getProfilesInPath(defaultProfileFolder);   
-      }
+      // Else look in the default package directory
+      const defaultPackageDirectory = await this.getDefaultPath();
+      profilesToClean = await this.getProfilesInPath(defaultPackageDirectory);
     }
 
     if (profilesToClean.length == 0) {
@@ -173,8 +154,35 @@ export default class Clean extends SfdxCommand {
     return profilesInPath;
   }
 
-  // TODO: should probably be in a util class
+  // should probably be in a util class
   private async getDefaultPath() {
+    
+    // Look for a default package directory
+    const options = SfdxProjectJson.getDefaultOptions();
+    const project = await SfdxProjectJson.create(options);
+    const packageDirectories = project.get('packageDirectories') as JsonArray || [];
+    
+    let foundPath;
+    for (let packageDirectory of packageDirectories) {
+      packageDirectory = packageDirectory as JsonMap;
 
+      if (packageDirectory.path && packageDirectory.default) {
+        
+        foundPath = path.join(
+          packageDirectory.path as string,
+          'main',
+          'default',
+          'profiles'
+        );
+        break;
+      }
+      
+      // If no default package directory is found, use the vanilla default DX folder 
+      if (!foundPath) {
+        foundPath = defaultProfileFolder;
+      }
+    }
+
+    return foundPath
   }
 }
