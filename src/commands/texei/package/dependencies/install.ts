@@ -76,6 +76,9 @@ export default class Install extends SfdxCommand {
       }
     }
 
+    //see if no filter is true
+    const packagesNoFilter = (this.flags.packages == null);;
+
     this.ux.startSpinner('Resolving dependencies');
 
     for (let packageDirectory of packageDirectories) {
@@ -83,7 +86,7 @@ export default class Install extends SfdxCommand {
       const packageName = (packageDirectory.package && packageDirectory.package.toString()) ? packageDirectory.package.toString() : '';
 
       // If the package is found, or if there isn't any package filtering
-      if (packages.has(packageName) || packages.size == 0) {
+      if (packages.has(packageName) || packagesNoFilter) {
 
         const dependencies = packageDirectory.dependencies || [];
 
