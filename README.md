@@ -74,7 +74,7 @@ EXAMPLE
   $ texei:package:dependencies:install -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"
 ```
 
-_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.5/src/commands/texei/package/dependencies/install.ts)_
+_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.6/src/commands/texei/package/dependencies/install.ts)_
 
 ## `sfdx texei:user:update [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -106,5 +106,5 @@ EXAMPLES
   $ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"
 ```
 
-_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.5/src/commands/texei/user/update.ts)_
+_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v0.0.6/src/commands/texei/user/update.ts)_
 <!-- commandsstop -->
