@@ -1,7 +1,7 @@
 {
   "name": "texei-sfdx-plugin",
   "description": "Texeï's plugin for sfdx",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": "Texeï",
   "bugs": "https://github.com/https://github.com/texei/texei-sfdx-plugin/issues",
   "dependencies": {
@@ -27,7 +27,8 @@
     "nyc": "^13",
     "ts-node": "^8",
     "tslint": "^5",
-    "typescript": "~3.3"
+    "typescript": "~3.3",
+    "rimraf": "^2.6.3"
   },
   "engines": {
     "node": ">=8.0.0"
@@ -57,9 +58,9 @@
   },
   "repository": "https://github.com/texei/texei-sfdx-plugin",
   "scripts": {
-    "postpack": "rm -f oclif.manifest.json",
+    "postpack": "rimraf -f oclif.manifest.json",
     "posttest": "tslint -p test -t stylish",
-    "prepack": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
+    "prepack": "rimraf -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "oclif-dev readme && git add README.md"
   }
