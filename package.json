@@ -10,8 +10,9 @@
     "@oclif/errors": "^1",
     "@salesforce/command": "^1.4.1",
     "@salesforce/core": "^1.3.2",
-    "tslib": "^1",
-    "child-process-promise": "^2.2.1"
+    "child-process-promise": "^2.2.1",
+    "jsforce": "^1.9.2",
+    "tslib": "^1"
   },
   "devDependencies": {
     "@oclif/dev-cli": "^1",
