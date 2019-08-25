@@ -1,0 +1,4 @@
+{
+    "commandDescription": "import objects' data to org",
+    "inputFlagDescription": "directory with files to import"
+}
