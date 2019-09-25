@@ -43,6 +43,18 @@ export default class Retrieve extends SfdxCommand {
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
   protected static requiresProject = true;
 
+  // This is removed, should be on a Permission Set
+  public nodesToRemove = ['userPermissions',
+                          'classAccesses',
+                          'externalDataSourceAccesses',
+                          'fieldPermissions',
+                          'objectPermissions',
+                          'pageAccesses',
+                          'tabVisibilities'];
+
+  // These metadata are on Permission Set, but Default is selected on Profile. Keeping only the default value                       
+  public nodesHavingDefault = ['applicationVisibilities','recordTypeVisibilities'];
+
   public async run(): Promise<any> {
     
     // Getting a jsforce connection instead of the one from sfdx core
@@ -184,21 +196,9 @@ export default class Retrieve extends SfdxCommand {
     });
   }
 
-  private async cleanProfile(profile:string) {
+  public async cleanProfile(profile:string) {
     //const nodesToKeep = ['custom','userLicense','layoutAssignments','loginHours','loginIpRanges'];
-    
-    // This is removed, should be on a Permission Set
-    const nodesToRemove = ['userPermissions',
-                           'classAccesses',
-                           'externalDataSourceAccesses',
-                           'fieldPermissions',
-                           'objectPermissions',
-                           'pageAccesses',
-                           'tabVisibilities'];
-    
-    // These metadata are on Permission Set, but Default is selected on Profile. Keeping only the default value                       
-    const nodesHavingDefault = ['applicationVisibilities','recordTypeVisibilities'];
-
+   
     // Parsing file
     // According to xml2js doc it's better to recreate a parser for each file
     // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
@@ -211,10 +211,10 @@ export default class Retrieve extends SfdxCommand {
       if (profileJson.Profile.hasOwnProperty(nodeKey)) {
 
         // Remove node
-        if (nodesToRemove.includes(nodeKey)) {
+        if (this.nodesToRemove.includes(nodeKey)) {
           delete profileJson.Profile[nodeKey];
         } 
-        else if (nodesHavingDefault.includes(nodeKey)) {
+        else if (this.nodesHavingDefault.includes(nodeKey)) {
 
           // Remove node, keeping only default value
           for (const nodeValue in profileJson.Profile[nodeKey]) {
