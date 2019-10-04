@@ -1,4 +1,4 @@
-import { SfdxCommand } from "@salesforce/command";
+import { flags, SfdxCommand } from "@salesforce/command";
 import { Messages, Connection, SfdxError } from "@salesforce/core";
 import {
   getMetadata,
@@ -22,6 +22,7 @@ const messages = Messages.loadMessages(
   "skinnyprofile-retrieve"
 );
 const defaultProjectPath = path.join('force-app','main','default');
+const defaultTimeout = 60000;
 
 let conn: Connection;
 let retrievedProfiles = [];
@@ -32,7 +33,9 @@ export default class Retrieve extends SfdxCommand {
   public static examples = ["$ texei:skinnyprofile:retrieve -u MyScratchOrg"];
 
   // TODO: add path for project files
-  protected static flagsConfig = {};
+  protected static flagsConfig = {
+    timeout: flags.string({ char: 't', required: false, description: 'timeout(ms) for profile retrieve (Default: 60000ms)' }),
+  };
 
   // Comment this out if your command does not require an org username
   protected static requiresUsername = true;
@@ -57,8 +60,6 @@ export default class Retrieve extends SfdxCommand {
 
   public async run(): Promise<any> {
     
-    // Getting a jsforce connection instead of the one from sfdx core
-    // --> Use latest version of jsforce + more methods
     conn = await this.org.getConnection();
 
     let typesToRetrieve = [];
@@ -144,9 +145,11 @@ export default class Retrieve extends SfdxCommand {
     this.debug(`DEBUG Retrieving Package:`);
     this.debug(JSON.stringify(mypackage, null, 2));
 
+    // Setting timeout
+    conn.metadata.pollTimeout = this.flags.timeout ? this.flags.timeout : defaultTimeout;
     // @ts-ignore: Don't know why, but TypeScript doesn't see the callback as optional
     const parsed = await conn.metadata.retrieve(mypackage).stream().pipe(unzip.Parse());
-
+    
     await new Promise(async (resolve, reject) => {
       this.debug(`DEBUG Parsing retrieved package`);
       
