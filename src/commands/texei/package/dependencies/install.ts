@@ -27,6 +27,7 @@ export default class Install extends SfdxCommand {
     installationkeys: flags.string({ char: 'k', required: false, description: 'installation key for key-protected packages (format is 1:MyPackage1Key 2: 3:MyPackage3Key... to allow some packages without installation key)' }),
     branch: flags.string({ char: 'b', required: false, description: 'the package version’s branch' }),
     packages: flags.string({ char: 'p', required: false, description: "comma-separated list of the packages to install related dependencies" }),
+    securitytype: flags.string({ char: 's', required: false, description: "security access type for the installed package (see force:package:install for default value)" }),
     namespaces: flags.string({ char: 'n', required: false, description: 'filter package installation by namespace' }),
     wait: flags.number({ char: 'w', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' }),
     noprompt: flags.boolean({ char: 'r', required: false, description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' })
@@ -186,6 +187,12 @@ export default class Install extends SfdxCommand {
           args.push(`${installationKeys[i]}`);
         }
 
+        // SECURITY TYPE
+        if (this.flags.securitytype) {
+          args.push('--securitytype');
+          args.push(`${this.flags.securitytype}`);
+        }
+        
         // WAIT
         const wait = this.flags.wait ? this.flags.wait.trim() : defaultWait;
         args.push('--wait');
