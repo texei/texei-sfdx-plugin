@@ -124,7 +124,7 @@ export default class Retrieve extends SfdxCommand {
     
     await this.retrievePackage(typesToRetrieve);
     
-    this.ux.startSpinner('Done.');
+    this.ux.stopSpinner('Done.');
 
 
     return { retrievedProfiles: retrievedProfiles };
