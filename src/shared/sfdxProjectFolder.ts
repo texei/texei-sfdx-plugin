@@ -46,7 +46,9 @@ export async function getFieldsForObject(objectName: string) {
     return fields;
 }
 
-export async function getRecordTypesForObject(objectName: string) {
+// TODO: Add format default to all functions
+// Expected values: Name, FileName, MetadataApiName --> Is there a way to use an enum (even better for doc)
+export async function getRecordTypesForObject(objectName: string, format='MetadataApiName') {
 
     const readDir = util.promisify(fs.readdir);
     const recordTypesPath = path.join('force-app',
@@ -59,7 +61,21 @@ export async function getRecordTypesForObject(objectName: string) {
     let recordTypes = [];
     if (fs.existsSync(recordTypesPath)) {
         recordTypes = (await readDir(recordTypesPath, 'utf8'))
-                        .map(f => `${objectName}.${f.substring(0, f.lastIndexOf('.recordType-meta.xml'))}`);
+                        .map(rec => {
+                            switch(format) {
+                                case 'Name': {
+                                    return rec.substring(0, rec.lastIndexOf('.recordType-meta.xml'));
+                                }
+                                case 'FileName': {
+                                    return rec;
+                                }
+                                default: {
+                                    //Whether format is not set, is default or is invalid value
+                                    //Metadata API Name (for retrieve) will be returned  
+                                    return `${objectName}.${rec.substring(0, rec.lastIndexOf('.recordType-meta.xml'))}`;
+                                }
+                            } 
+                        });
     }
 
     return recordTypes;

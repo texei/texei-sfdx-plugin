@@ -1,0 +1,3 @@
+{
+    "commandDescription": "delete references to a namespaced package from source (package picklists referenced in record types)"
+}
