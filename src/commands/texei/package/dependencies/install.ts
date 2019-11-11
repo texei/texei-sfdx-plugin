@@ -194,7 +194,7 @@ export default class Install extends SfdxCommand {
         }
         
         // WAIT
-        const wait = this.flags.wait ? this.flags.wait.trim() : defaultWait;
+        const wait = this.flags.wait ? this.flags.wait : defaultWait;
         args.push('--wait');
         args.push(`${wait}`);
         args.push('--publishwait');
