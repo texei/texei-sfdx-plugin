@@ -8,7 +8,7 @@ import {
 import { AnyJson } from "@salesforce/ts-types";
 import * as path from 'path';
 var fs = require('fs');
-var unzip = require('unzip');
+var unzipper = require('unzipper');
 const util = require('util');
 const xml2js = require('xml2js');
 
@@ -149,7 +149,7 @@ export default class Retrieve extends SfdxCommand {
     // Setting timeout
     conn.metadata.pollTimeout = this.flags.timeout ? this.flags.timeout : defaultTimeout;
     // @ts-ignore: Don't know why, but TypeScript doesn't see the callback as optional
-    const parsed = await conn.metadata.retrieve(mypackage).stream().pipe(unzip.Parse());
+    const parsed = await conn.metadata.retrieve(mypackage).stream().pipe(unzipper.Parse());
     
     await new Promise(async (resolve, reject) => {
       this.debug(`DEBUG Parsing retrieved package`);
