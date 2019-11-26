@@ -14,7 +14,7 @@ export default class Update extends SfdxCommand {
 
   public static examples = [
     `$ sfdx texei:user:update --targetusername myOrg@example.com --values "LanguageLocaleKey='fr'" \nSuccessfully updated record: 005D2A90N8A11SVPE2.`,
-    `$ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true --json"`
+    `$ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true" --json`
   ];
 
   //public static args = [{ name: 'file' }];
