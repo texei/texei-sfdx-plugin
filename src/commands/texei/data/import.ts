@@ -5,7 +5,6 @@ import * as fs from "fs";
 import * as path from "path";
 import { Record, RecordResult, SuccessResult, Connection } from 'jsforce';
 const util = require("util");
-import { getJsforceConnection } from '../../../shared/jsforceHelper';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -44,7 +43,7 @@ export default class Import extends SfdxCommand {
   protected static requiresProject = false;
 
   public async run(): Promise<AnyJson> {
-    conn = await getJsforceConnection(this.org.getConnection().getConnectionOptions());
+    conn = await this.org.getConnection();
     recordIdsMap = new Map<string, string>();
 
     // Just add potential SfdxOrgUser that could be used during export
