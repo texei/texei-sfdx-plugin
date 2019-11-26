@@ -53,7 +53,8 @@ export default class Retrieve extends SfdxCommand {
                           'fieldPermissions',
                           'objectPermissions',
                           'pageAccesses',
-                          'tabVisibilities'];
+                          'tabVisibilities',
+                          'customMetadataTypeAccesses'];
 
   // These metadata are on Permission Set, but Default is selected on Profile. Keeping only the default value                       
   public nodesHavingDefault = ['applicationVisibilities','recordTypeVisibilities'];
