@@ -116,7 +116,7 @@ export default class Clean extends SfdxCommand {
       // Writing back to file
       await fs.writeFile(filePath, xmlFile, 'utf8', function (err) {
         if (err) {
-          throw new SfdxError(`Unable to write Products file at path ${filePath}: ${err}`);
+          throw new SfdxError(`Unable to write Profile file at path ${filePath}: ${err}`);
         }
       });
 
