@@ -32,7 +32,6 @@ export default class Fix extends SfdxCommand {
   public async run(): Promise<any> {
     let result = {};
 
-    //const conn = this.org.getConnection();
     await this.fixContract();
 
     return result;
