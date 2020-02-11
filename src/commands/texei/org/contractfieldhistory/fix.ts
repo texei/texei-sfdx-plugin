@@ -43,7 +43,7 @@ export default class Fix extends SfdxCommand {
 
     const POST_LOGIN_PATH = "/ui/setup/layout/FieldHistoryTracking?pEntity=Contract";
     
-    this.ux.startSpinner('Fixing Contract Field History');
+    this.ux.startSpinner('Fixing Contract Field History', null, { stdout: true });
     this.debug(`DEBUG Login to Scratch Org`);
 
     const browser = await puppeteer.launch({

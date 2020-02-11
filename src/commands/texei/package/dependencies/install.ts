@@ -80,7 +80,7 @@ export default class Install extends SfdxCommand {
     //see if no filter is true
     const packagesNoFilter = (this.flags.packages == null);;
 
-    this.ux.startSpinner('Resolving dependencies');
+    this.ux.startSpinner('Resolving dependencies', null, { stdout: true });
 
     for (let packageDirectory of packageDirectories) {
       packageDirectory = packageDirectory as JsonMap;

@@ -49,7 +49,7 @@ export default class Export extends SfdxCommand {
 
     for (const objectName of objectList) {
 
-      this.ux.startSpinner(`Exporting ${objectName}`);
+      this.ux.startSpinner(`Exporting ${objectName}`, null, { stdout: true });
       
       const fileName = `${index}-${objectName}.json`;
       const objectRecords:any = {};

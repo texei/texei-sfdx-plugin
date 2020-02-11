@@ -63,7 +63,7 @@ export default class Import extends SfdxCommand {
     for (const dataFile of dataFiles) {
       const objectName = await this.getObjectNameFromFile(dataFile);
 
-      this.ux.startSpinner(`Importing ${objectName}`);
+      this.ux.startSpinner(`Importing ${objectName}`, null, { stdout: true });
 
       const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
 
