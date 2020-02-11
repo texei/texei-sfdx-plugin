@@ -55,6 +55,9 @@
     "topics": {
       "texei": {
         "description": "Texeï's plugin for sfdx"
+      },
+      "texei:org": {
+        "description": "Commands to manage org"
       }
     }
   },
