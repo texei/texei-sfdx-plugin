@@ -250,7 +250,7 @@ export default class Extract extends SfdxCommand {
 
   private formatSetting(myJson) {
 
-    const settingName = this.toLowerCamelCase(myJson.fullName);
+    this.toLowerCamelCase(myJson.fullName);
     delete myJson.fullName;
 
     return myJson;
