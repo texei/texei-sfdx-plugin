@@ -10,20 +10,22 @@ core.Messages.importMessagesDirectory(__dirname);
 const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'org-shape-extract');
 
 const definitionFileName  = 'project-scratch-def.json';
+// TODO: Add bypassed values in the correct array, and after investigation either fix or update org-shape-extract.md doc
 const settingValuesProdOnly = ['Packaging2','ExpandedSourceTrackingPref','ScratchOrgManagementPref','ShapeExportPref',
-                              'PRMAccRelPref','allowUsersToRelateMultipleContactsToTasksAndEvents','socialCustomerServiceSettings',
-                              'opportunityFilterSettings','enableAccountOwnerReport','defaultCaseOwner','PortalUserShareOnCase',
-                              'keepRecordTypeOnAssignmentRule','webToCase','routingAddresses'];
+                               'PRMAccRelPref'];
 
 const settingValuesBugsRelated = ['enableOmniAutoLoginPrompt','enableOmniSecondaryRoutingPriority',
-                              'VoiceCallListEnabled','VoiceCallRecordingEnabled','VoiceCoachingEnabled','VoiceConferencingEnabled',
-                              'VoiceEnabled','VoiceLocalPresenceEnabled','VoiceMailDropEnabled','VoiceMailEnabled','CallDispositionEnabled'];
+                                  'VoiceCallListEnabled','VoiceCallRecordingEnabled','VoiceCoachingEnabled','VoiceConferencingEnabled',
+                                  'VoiceEnabled','VoiceLocalPresenceEnabled','VoiceMailDropEnabled','VoiceMailEnabled','CallDispositionEnabled'];
                               
 const settingValuesBugsToInvestigate = ['enableEngagementHistoryDashboards','EventLogWaveIntegEnabled','SendThroughGmailPref',
-                                        'PardotAppV1Enabled','PardotEmbeddedAnalyticsPref','PardotEnabled'];
+                                        'PardotAppV1Enabled','PardotEmbeddedAnalyticsPref','PardotEnabled',
+                                        'allowUsersToRelateMultipleContactsToTasksAndEvents','socialCustomerServiceSettings',
+                                        'opportunityFilterSettings','enableAccountOwnerReport','defaultCaseOwner','PortalUserShareOnCase',
+                                        'keepRecordTypeOnAssignmentRule','webToCase','routingAddresses'];
 
-// TODO: manage dependencies correctly: for instance, setting "networksEnabled" requires "features":["Communities"]
-const featureDependencies = new Map<string, String>([['networksEnabled','Communities']]);
+// TODO: manage dependencies correctly: for instance, setting "enableCommunityWorkspaces" requires "features":["Communities"]
+const featureDependencies = new Map<string, String>([['enableCommunityWorkspaces','Communities']]);
 
 export default class Extract extends SfdxCommand {
 
@@ -34,7 +36,8 @@ export default class Extract extends SfdxCommand {
   ];
 
   protected static flagsConfig = {
-    outputdir: flags.string({ char: 'd', description: messages.getMessage('directoryFlagDescription'), default: 'config' })
+    outputdir: flags.string({ char: 'd', description: messages.getMessage('directoryFlagDescription'), default: 'config' }),
+    scope: flags.string({ char: 's', description: messages.getMessage('scopeFlagDescription'), options: ['basic', 'full'], default: 'basic' })
   };
 
   // Comment this out if your command does not require an org username
@@ -48,6 +51,7 @@ export default class Extract extends SfdxCommand {
 
   public async run(): Promise<any> {
     
+    this.ux.warn('This command is in beta, only extracting some settings. Read more at https://github.com/texei/texei-sfdx-plugin/blob/master/org-shape-command.md');
     this.ux.startSpinner('Extracting Org Shape', null, { stdout: true });
 
     // Query org for org infos
@@ -60,20 +64,9 @@ export default class Extract extends SfdxCommand {
     let definitionValuesTemp: any = {};
     definitionValuesTemp.settings = {};
 
-    const settingValuesToIgnore = settingValuesProdOnly.concat(settingValuesBugsRelated).concat(settingValuesBugsToInvestigate);
-
-    /*
-    // TODO: find a way to get all these values
-    "orgName": "Texeï",
-    "edition": "Enterprise",
-    "country": "FR",
-    "language": "fr_FR"
-
-    "Name": "TEXEÏ SAS",
-    "Country": "France",
-    "LanguageLocaleKey": "en_US",
-    "OrganizationType": "Enterprise Edition"
-    */
+    const settingValuesToIgnore = (this.flags.scope === 'full') ?
+                                  [] :
+                                  settingValuesProdOnly.concat(settingValuesBugsRelated).concat(settingValuesBugsToInvestigate);
 
     // Getting API Version
     // TODO: put this in a helper ? Is there a Core library method to get this OOTB ?
@@ -106,10 +99,7 @@ export default class Extract extends SfdxCommand {
       // Upper camel case --> lower camel case ; ex: OmniChannelSettings --> omniChannelSettings
 
       for (const setting of settingValues) {
-        // TODO: hardcoding an easy one to start, let's do one with a deeper hierarchy after
-        // TODO: beware of settings like security and IP ranges ?
         // TODO: manage dependencies on features
-        //console.log(featureDependencies.get('networksEnabled'));
 
         // For whatever reason, this setting has not the same format as others
         if (setting.fullName == 'OrgPreferenceSettings') {
@@ -119,7 +109,6 @@ export default class Extract extends SfdxCommand {
           for (const subsetting of setting.preferences) {
 
             if (!settingValuesToIgnore.includes(subsetting.settingName)) {
-
               const settingName = this.toLowerCamelCase(subsetting.settingName);
               settingValues[settingName] = subsetting.settingValue;
 
@@ -155,29 +144,29 @@ export default class Extract extends SfdxCommand {
         
         // TODO: Test all settings and add them to org-shape-command.md if it doesn't work
         const settingsToTest = ['AccountSettings',
-                                 'ActivitiesSettings',
-                                 'AddressSettings',
-                                 'BusinessHoursSettings',
-                                 'CaseSettings',
-                                 'CompanySettings',
-                                 'ContractSettings',
-                                 'EntitlementSettings',
-                                 'FileUploadAndDownloadSecuritySettings',
-                                 'IdeasSettings',
-                                 'MacroSettings',
-                                 'MobileSettings',
-                                 'NameSettings',
-                                 'OmniChannelSettings',
-                                 'OpportunitySettings',
-                                 'OrderSettings',
-                                 'PathAssistantSettings',
-                                 'ProductSettings',
-                                 'QuoteSettings',
-                                 'SecuritySettings',
-                                 'SocialCustomerServiceSettings'];
+                                'ActivitiesSettings',
+                                'AddressSettings',
+                                'BusinessHoursSettings',
+                                'CaseSettings',
+                                'CommunitiesSettings',
+                                'CompanySettings',
+                                'ContractSettings',
+                                'EntitlementSettings',
+                                'FileUploadAndDownloadSecuritySettings',
+                                'IdeasSettings',
+                                'MacroSettings',
+                                'MobileSettings',
+                                'NameSettings',
+                                'OmniChannelSettings',
+                                'OpportunitySettings',
+                                'OrderSettings',
+                                'PathAssistantSettings',
+                                'ProductSettings',
+                                'QuoteSettings',
+                                'SecuritySettings',
+                                'SocialCustomerServiceSettings'];
 
-        if (settingsToTest.includes(setting.fullName)) {
-        //if (true) {
+        if (setting.fullName !== undefined && (settingsToTest.includes(setting.fullName) || this.flags.scope === 'full')) {
 
           const settingName = this.toLowerCamelCase(setting.fullName);
           if (!settingValuesToIgnore.includes(settingName)) {
@@ -185,6 +174,11 @@ export default class Extract extends SfdxCommand {
 
             // All this code to ignore values should be refactored in a better way, todo
             for (const property in setting) {
+              
+              // Checking if there is a feature dependency
+              if (featureDependencies.has(property)) {
+                featureList.push(featureDependencies.get(property));
+              }
 
               if (setting.hasOwnProperty(property) && settingValuesToIgnore.includes(property)) {
                 delete setting[property];
@@ -205,8 +199,10 @@ export default class Extract extends SfdxCommand {
 
       // Construct the object with all values
       definitionValues.orgName = orgInfos.records[0].Name;
+      // TODO: map OrganizationType to edition
       definitionValues.edition = 'Developer';
       definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
+
       // Adding features if needed
       if (featureList.length > 0) {
         definitionValues.features = featureList;
