@@ -30,7 +30,8 @@ Removed `enableOmniAutoLoginPrompt` and `enableOmniSecondaryRoutingPriority`:
         }
     },
     "enableOmniSkillsRouting": false
-}```
+}
+````
 
 ### Voice
 According to Case 24662543, this will only work with an add-on license, so removed the following:
