@@ -1,7 +1,7 @@
 {
   "name": "texei-sfdx-plugin",
   "description": "Texeï's plugin for sfdx",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "author": "Texeï",
   "bugs": "https://github.com/https://github.com/texei/texei-sfdx-plugin/issues",
   "dependencies": {
@@ -55,6 +55,9 @@
     "topics": {
       "texei": {
         "description": "Texeï's plugin for sfdx"
+      },
+      "texei:org": {
+        "description": "Commands to manage org"
       }
     }
   },
