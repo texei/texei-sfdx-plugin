@@ -7,7 +7,6 @@ This command is in beta and far from being 100% working. It's more a helper than
 * Only a few settings are added, but you can try adding all of them using the `--scope=full`
 * So far there is no specific API to get all the features, so they aren't added to the Scratch Definition File
 * orgPreferenceSettings has not been replaced by all the according settings
-* edition is always developer
 
 Also, several settings have been removed because of bugs, but a lot of investigation has not been done because of lack of time, feel free to fix command/improve this doc.
 

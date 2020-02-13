@@ -199,8 +199,7 @@ export default class Extract extends SfdxCommand {
 
       // Construct the object with all values
       definitionValues.orgName = orgInfos.records[0].Name;
-      // TODO: map OrganizationType to edition
-      definitionValues.edition = 'Developer';
+      definitionValues.edition = this.mapOrganizationTypeToScratchOrgEdition(orgInfos.records[0].OrganizationType);
       definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
 
       // Adding features if needed
@@ -254,5 +253,35 @@ export default class Extract extends SfdxCommand {
     delete myJson.fullName;
 
     return myJson;
+  }
+
+  /**
+   * This maps organization types to one of the 4 available scratch org editions with the fallback of "Developer".
+   * Sources:
+   *  [Way to identify Salesforce edition using API?](https://salesforce.stackexchange.com/questions/216/way-to-identify-salesforce-edition-using-api)
+   *  [Salesforce Editions That Are No Longer Sold](https://help.salesforce.com/articleView?id=overview_other_editions.htm&type=5)
+   *  [Scratch Org Definition Configuration Values](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_scratch_orgs_def_file_config_values.htm)
+   * @param organizationType
+   */
+  private mapOrganizationTypeToScratchOrgEdition(organizationType) {
+    // possible organization types as of v47.0:
+    // ["Team Edition","Professional Edition","Enterprise Edition","Developer Edition","Personal Edition","Unlimited Edition","Contact Manager Edition","Base Edition"]
+    // Base Edition: https://twitter.com/EvilN8/status/430810563044601856
+    if (["Team Edition", "Personal Edition", "Base Edition"].includes(organizationType)) {
+      return "Group";
+    }
+    if (["Contact Manager Edition"].includes(organizationType)) {
+      return "Professional";
+    }
+    if (["Unlimited Edition"].includes(organizationType)) {
+      return "Enterprise";
+    }
+    const sanitizedOrganizationType = organizationType.replace(" Edition", "");
+    if (
+      ["Group", "Professional", "Enterprise", "Developer"].includes(sanitizedOrganizationType)
+    ) {
+      return sanitizedOrganizationType;
+    }
+    return "Developer";
   }
 }
