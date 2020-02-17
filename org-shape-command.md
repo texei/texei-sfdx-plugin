@@ -1,6 +1,7 @@
 # sfdx texei:org:shape:extract command
 
-This command is in beta and far from being 100% working. It's more a helper than a fully working command.
+This command is in beta and far from being 100% working. It's more a helper than a fully working command.  
+Some errors may be linked to some Editions not having the required licenses. Try switching the edition to developer if you have licenses errors.
 
 ## What's the command doing and not doing
 * The command is only converting metadata API Settings to definition file settings
