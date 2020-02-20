@@ -3,6 +3,13 @@ import { Messages, SfdxError, Connection } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import * as fs from 'fs';
 import * as path from 'path';
+const util = require("util");
+
+interface DataPlan {
+  name: string;
+  label: string;
+  filters: string;
+}
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -11,7 +18,8 @@ Messages.importMessagesDirectory(__dirname);
 // or any library that is using the messages framework can also be loaded this way.
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'data-export');
 let conn:Connection;
-let objectList:Array<string>;
+let objectList:Array<DataPlan>;
+let lastReferenceIds: Map<string, number> = new Map<string, number>();
 
 export default class Export extends SfdxCommand {
 
@@ -24,8 +32,9 @@ export default class Export extends SfdxCommand {
   ];
 
   protected static flagsConfig = {
-    objects: flags.string({char: 'o', description: messages.getMessage('objectsFlagDescription'), required: true}),
-    outputdir: flags.string({char: 'd', description: messages.getMessage('outputdirFlagDescription'), required: true})
+    outputdir: flags.string({char: 'd', description: messages.getMessage('outputdirFlagDescription'), required: true}),
+    objects: flags.string({char: 'o', description: messages.getMessage('objectsFlagDescription'), required: false}),
+    dataplan: flags.string({char: 'p', description: messages.getMessage('dataPlanFlagDescription'), required: false})
   };
 
   // Comment this out if your command does not require an org username
@@ -44,16 +53,33 @@ export default class Export extends SfdxCommand {
 
     let recordIdsMap: Map<string, string> = new Map<string, string>();
 
-    objectList = this.flags.objects.split(',');
+    if (this.flags.objects) {
+      // Read objects list from flag, mapping to data plan format
+      objectList = this.flags.objects.split(',').map(
+        function(elem) {
+          return {
+            "name": elem
+          }
+        });
+    }
+    else if (this.flags.dataplan) {
+      // Read objects list from file
+      const readFile = util.promisify(fs.readFile);
+      const dataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
+      objectList = dataPlan.sObjects;
+    }
+    else {
+      throw new SfdxError(`Either objects or dataplan flag is mandatory`);
+    }
+
     let index = 1;
+    for (const obj of objectList) {
 
-    for (const objectName of objectList) {
-
-      this.ux.startSpinner(`Exporting ${objectName}`, null, { stdout: true });
+      this.ux.startSpinner(`Exporting ${obj.name}${obj.label?' ('+obj.label+')':''}`, null, { stdout: true });
       
-      const fileName = `${index}-${objectName}.json`;
+      const fileName = `${index}-${obj.name}${obj.label ? '-'+obj.label : ''}.json`;
       const objectRecords:any = {};
-      objectRecords.records = await this.getsObjectRecords(objectName, null, recordIdsMap);
+      objectRecords.records = await this.getsObjectRecords(obj, null, recordIdsMap);
       await this.saveFile(objectRecords, fileName);
       index++;
 
@@ -63,13 +89,13 @@ export default class Export extends SfdxCommand {
     return { message: 'Data exported' };
   }
 
-  private async getsObjectRecords(sobjectName: string, fieldsToExclude: Array<string>, recordIdsMap: Map<string, string>) {
+  private async getsObjectRecords(sobject: DataPlan, fieldsToExclude: Array<string>, recordIdsMap: Map<string, string>) {
 
     // Query to retrieve creatable sObject fields
     let fields = [];
     let lookups = [];
     let userFieldsReference = [];
-    const describeResult = await conn.sobject(sobjectName).describe();
+    const describeResult = await conn.sobject(sobject.name).describe();
 
     const sObjectLabel = describeResult.label;
 
@@ -87,7 +113,7 @@ export default class Export extends SfdxCommand {
         if (field.referenceTo && field.referenceTo.length > 0 && field.name != 'OwnerId' && field.name != 'RecordTypeId') {
 
           // If User is queried, use the reference, otherwise use the Scratch Org User
-          if (!objectList.includes('User') && field.referenceTo.includes('User')) {
+          if (!objectList.find(x => x.name === 'User') && field.referenceTo.includes('User')) {
             userFieldsReference.push(field.name);
           }
           else {
@@ -108,22 +134,29 @@ export default class Export extends SfdxCommand {
 
     // Query to get sObject data
     const recordQuery = `SELECT Id, ${fields.join()}
-                         FROM ${sobjectName}`;
+                         FROM ${sobject.name}
+                         ${sobject.filters ? 'WHERE '+sobject.filters : ''}`;
     const recordResults = (await conn.autoFetchQuery(recordQuery)).records;
 
     // Replace Lookup Ids + Record Type Ids by references
-    await this.cleanJsonRecordLookup(sObjectLabel, recordResults, recordIdsMap, lookups, userFieldsReference);
+    await this.cleanJsonRecord(sObjectLabel, recordResults, recordIdsMap, lookups, userFieldsReference);
 
     return recordResults;
   }
 
   // Clean JSON to have the same output format as force:data:tree:export
   // Main difference: RecordTypeId is replaced by DeveloperName
-  private async cleanJsonRecordLookup(objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
+  private async cleanJsonRecord(objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
 
-    let refId = 1;
+    let refId = 0;
+    // If this object was already exported before, start the numbering after the last one already used
+    if (lastReferenceIds.get(objectLabel)) {
+      refId = lastReferenceIds.get(objectLabel);
+    }
+
     for (const record of records) {
-      
+      refId++;
+
       // Delete record url, useless to reimport somewhere else
       delete record.attributes.url;
 
@@ -150,9 +183,10 @@ export default class Export extends SfdxCommand {
       delete record.Id;
       delete record.RecordType;
       delete record.OwnerId;
-
-      refId++;
     }
+
+    // Save last used number for this object
+    lastReferenceIds.set(objectLabel, refId);
   }
 
   private async saveFile(records: {}[], fileName: string) {

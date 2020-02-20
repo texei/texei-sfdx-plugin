@@ -61,16 +61,20 @@ export default class Import extends SfdxCommand {
 
     // Read and import data
     for (const dataFile of dataFiles) {
-      const objectName = await this.getObjectNameFromFile(dataFile);
 
-      this.ux.startSpinner(`Importing ${objectName}`, null, { stdout: true });
+      // If file doesn't start with a number, just don't parse it (could be data-plan.json)
+      if (!isNaN(dataFile.substring(0,1))) {
+        const objectName = await this.getObjectNameFromFile(dataFile);
 
-      const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
+        this.ux.startSpinner(`Importing ${dataFile}`, null, { stdout: true });
 
-      await this.prepareDataForInsert(objectName, objectRecords);
-      await this.insertData(objectRecords, objectName);
+        const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
 
-      this.ux.stopSpinner(`Done.`);
+        await this.prepareDataForInsert(objectName, objectRecords);
+        await this.insertData(objectRecords, objectName);
+
+        this.ux.stopSpinner(`Done.`);
+      }
     }
 
     return { message: "Data imported" };
@@ -166,11 +170,19 @@ export default class Import extends SfdxCommand {
       throw new SfdxError(`Invalid file name: ${filePath}`);
     }
 
-    // From 1-MyCustomObject__c.json to MyCustomObject__c
-    return filePath.substring(filePath.indexOf("-") + 1).replace(".json", "");
+    // From 1-MyCustomObject__c.json or 1-MyCustomObject-MyLabel__c.json to MyCustomObject__c
+    let fileName: string = '';
+    fileName = filePath.substring(filePath.indexOf("-") + 1).replace(".json", "");
+    if (fileName.indexOf("-") > 0) {
+      // Format is 1-MyCustomObject-MyLabel__c.json
+      fileName = fileName.substring(0, fileName.indexOf("-"));
+    }
+
+    return fileName;
   }
 
   private async getLookupsForObject(objectName: string) {
+
     let lookups = [];
     const describeResult = await conn.sobject(objectName).describe();
 
