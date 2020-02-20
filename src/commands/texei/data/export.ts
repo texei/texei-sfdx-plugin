@@ -179,6 +179,10 @@ export default class Export extends SfdxCommand {
         record[userField] = 'SfdxOrgUser';
       }
 
+      // TODO: As we are now iterating on all fields to remove null values:
+      // --> refactor all previous for loops to do the work here
+      Object.keys(record).forEach(key => (!record[key] && record[key] !== undefined) && delete record[key]);
+
       // Delete unused fields
       delete record.Id;
       delete record.RecordType;
