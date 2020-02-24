@@ -57,8 +57,10 @@ export default class Import extends SfdxCommand {
 
     // Read data file
     const readDir = util.promisify(fs.readdir);
-    let dataFiles = await readDir(filesPath, "utf8");
-
+    let dataFiles = (await readDir(filesPath, "utf8")).sort(function(a, b) {
+      return a.substr(0, a.indexOf('-'))-b.substr(0, b.indexOf('-'))
+    });
+    
     // Read and import data
     for (const dataFile of dataFiles) {
 
