@@ -1,6 +1,7 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import { Messages, SfdxError, Connection } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
+import { ExecuteOptions } from 'jsforce';
 import * as fs from 'fs';
 import * as path from 'path';
 const util = require("util");
@@ -9,6 +10,7 @@ interface DataPlan {
   name: string;
   label: string;
   filters: string;
+  excludedFields: Array<string>;
 }
 
 // Initialize Messages with the current plugin directory
@@ -20,6 +22,7 @@ const messages = Messages.loadMessages('texei-sfdx-plugin', 'data-export');
 let conn:Connection;
 let objectList:Array<DataPlan>;
 let lastReferenceIds: Map<string, number> = new Map<string, number>();
+let globallyExcludedFields: Array<string>;
 
 export default class Export extends SfdxCommand {
 
@@ -67,6 +70,11 @@ export default class Export extends SfdxCommand {
       const readFile = util.promisify(fs.readFile);
       const dataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
       objectList = dataPlan.sObjects;
+
+      // If there are some globally excluded fields, add them
+      if (dataPlan.excludedFields) {
+        globallyExcludedFields = dataPlan.excludedFields;
+      }
     }
     else {
       throw new SfdxError(`Either objects or dataplan flag is mandatory`);
@@ -76,10 +84,10 @@ export default class Export extends SfdxCommand {
     for (const obj of objectList) {
 
       this.ux.startSpinner(`Exporting ${obj.name}${obj.label?' ('+obj.label+')':''}`, null, { stdout: true });
-      
+
       const fileName = `${index}-${obj.name}${obj.label ? '-'+obj.label : ''}.json`;
       const objectRecords:any = {};
-      objectRecords.records = await this.getsObjectRecords(obj, null, recordIdsMap);
+      objectRecords.records = await this.getsObjectRecords(obj, recordIdsMap);
       await this.saveFile(objectRecords, fileName);
       index++;
 
@@ -89,7 +97,7 @@ export default class Export extends SfdxCommand {
     return { message: 'Data exported' };
   }
 
-  private async getsObjectRecords(sobject: DataPlan, fieldsToExclude: Array<string>, recordIdsMap: Map<string, string>) {
+  private async getsObjectRecords(sobject: DataPlan, recordIdsMap: Map<string, string>) {
 
     // Query to retrieve creatable sObject fields
     let fields = [];
@@ -99,9 +107,10 @@ export default class Export extends SfdxCommand {
 
     const sObjectLabel = describeResult.label;
 
-    // Just in case fieldsToExclude is passed as null
-    if (!fieldsToExclude) {
-      fieldsToExclude = [];
+    // Add fields to exclude, if any
+    let fieldsToExclude = globallyExcludedFields ? globallyExcludedFields : [];
+    if (sobject.excludedFields) {
+      fieldsToExclude = fieldsToExclude.concat(sobject.excludedFields);
     }
 
     for (const field of describeResult.fields) {
@@ -132,21 +141,32 @@ export default class Export extends SfdxCommand {
       fields.push('RecordType.DeveloperName');
     }
 
+    // If sObject is PriceBook, we need the IsStandard field
+    if (sobject.name === 'Pricebook2') {
+      fields.push('IsStandard');
+    }
+    
     // Query to get sObject data
     const recordQuery = `SELECT Id, ${fields.join()}
                          FROM ${sobject.name}
                          ${sobject.filters ? 'WHERE '+sobject.filters : ''}`;
-    const recordResults = (await conn.autoFetchQuery(recordQuery)).records;
+    // API Default limit is 10 000, just check if we need to extend it
+    const recordNumber:number = ((await conn.query(`Select count(Id) numberOfRecords from ${sobject.name}`)).records[0] as any).numberOfRecords;
+    let options:ExecuteOptions = {};
+    if (recordNumber > 10000) {
+      options.maxFetch = recordNumber;
+    }
+    const recordResults = (await conn.autoFetchQuery(recordQuery, options)).records;
 
     // Replace Lookup Ids + Record Type Ids by references
-    await this.cleanJsonRecord(sObjectLabel, recordResults, recordIdsMap, lookups, userFieldsReference);
+    await this.cleanJsonRecord(sobject, sObjectLabel, recordResults, recordIdsMap, lookups, userFieldsReference);
 
     return recordResults;
   }
 
   // Clean JSON to have the same output format as force:data:tree:export
   // Main difference: RecordTypeId is replaced by DeveloperName
-  private async cleanJsonRecord(objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
+  private async cleanJsonRecord(sobject: DataPlan, objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
 
     let refId = 0;
     // If this object was already exported before, start the numbering after the last one already used
@@ -155,14 +175,30 @@ export default class Export extends SfdxCommand {
     }
 
     for (const record of records) {
-      refId++;
 
       // Delete record url, useless to reimport somewhere else
       delete record.attributes.url;
 
-      // Add the new ReferenceId
-      record.attributes.referenceId = `${objectLabel}Ref${refId}`;
-      recordIdsMap.set(record.Id, record.attributes.referenceId);
+      // If Id was already exported and has a referenceId, use it (used for update)
+      if (recordIdsMap.get(record.Id)) {
+        record.attributes.referenceId = recordIdsMap.get(record.Id);
+      }
+      else {
+
+        // Add the new ReferenceId
+        if (sobject.name === 'Pricebook2' && record.IsStandard) { 
+          // Specific use case for Standard Price Book that will need to be queried from target org
+          // TODO: Maybe not even save this record
+          const standardPriceBookLabel = 'StandardPriceBook';
+          record.attributes.referenceId = standardPriceBookLabel;
+          recordIdsMap.set(record.Id, standardPriceBookLabel);    
+        }
+        else {
+          refId++;
+          record.attributes.referenceId = `${objectLabel.replace(/ /g,'').replace(/'/g,'')}Ref${refId}`;
+          recordIdsMap.set(record.Id, record.attributes.referenceId);
+        }
+      }
 
       // Replace lookup Ids
       for (const lookup of lookups) {
@@ -181,12 +217,17 @@ export default class Export extends SfdxCommand {
 
       // TODO: As we are now iterating on all fields to remove null values:
       // --> refactor all previous for loops to do the work here
-      Object.keys(record).forEach(key => (!record[key] && record[key] !== undefined) && delete record[key]);
+      // FIXME: Exclude value at 0 for now :'(
+      //Object.keys(record).forEach(key => (!record[key] && record[key] !== undefined) && delete record[key]);
 
       // Delete unused fields
       delete record.Id;
       delete record.RecordType;
       delete record.OwnerId;
+
+      if (sobject.name === 'Pricebook2') {
+        delete record.IsStandard;
+      }
     }
 
     // Save last used number for this object
