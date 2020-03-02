@@ -3,7 +3,7 @@ import { Messages, SfdxError } from "@salesforce/core";
 import { AnyJson } from "@salesforce/ts-types";
 import * as fs from "fs";
 import * as path from "path";
-import { Record, RecordResult, SuccessResult, Connection } from 'jsforce';
+import { Record, RecordResult, SuccessResult, ErrorResult, Connection } from 'jsforce';
 const util = require("util");
 
 // Initialize Messages with the current plugin directory
@@ -15,6 +15,12 @@ const messages = Messages.loadMessages("texei-sfdx-plugin", "data-import");
 
 let conn: Connection;
 let recordIdsMap: Map<string, string>;
+
+interface ErrorResultDetail {
+  statusCode: string;
+  message: string;
+  fields: string[];
+}
 
 export default class Import extends SfdxCommand {
   public static description = messages.getMessage("commandDescription");
@@ -57,20 +63,28 @@ export default class Import extends SfdxCommand {
 
     // Read data file
     const readDir = util.promisify(fs.readdir);
-    let dataFiles = await readDir(filesPath, "utf8");
-
+    let dataFiles = (await readDir(filesPath, "utf8")).filter(f => {
+      return !isNaN(f.substr(0, f.indexOf('-')));
+    }).sort(function(a, b) {
+      return a.substr(0, a.indexOf('-'))-b.substr(0, b.indexOf('-'))
+    });
+    
     // Read and import data
     for (const dataFile of dataFiles) {
-      const objectName = await this.getObjectNameFromFile(dataFile);
 
-      this.ux.startSpinner(`Importing ${objectName}`, null, { stdout: true });
+      // If file doesn't start with a number, just don't parse it (could be data-plan.json)
+      if (!isNaN(dataFile.substring(0,1))) {
+        const objectName = await this.getObjectNameFromFile(dataFile);
 
-      const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
+        this.ux.startSpinner(`Importing ${dataFile}`, null, { stdout: true });
 
-      await this.prepareDataForInsert(objectName, objectRecords);
-      await this.insertData(objectRecords, objectName);
+        const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
 
-      this.ux.stopSpinner(`Done.`);
+        await this.prepareDataForInsert(objectName, objectRecords);
+        await this.upsertData(objectRecords, objectName);
+
+        this.ux.stopSpinner(`Done.`);
+      }
     }
 
     return { message: "Data imported" };
@@ -84,11 +98,20 @@ export default class Import extends SfdxCommand {
     // Get Record Types information with newly generated Ids
     recTypeInfos = await this.getRecordTypeMap(sobjectName);
 
+    // If object is PricebookEntry, look for standard price book
+    let standardPriceBookId = '';
+    if (sobjectName === 'PricebookEntry') {
+      standardPriceBookId = ((await conn.query('Select Id from Pricebook2 where IsStandard = true')).records[0] as any).Id;
+    }
+    
     // Replace data to import with newly generated Record Type Ids
     for (const sobject of jsonData) {
+
       // Replace all lookups
       for (const lookup of lookups) {
-        sobject[lookup] = recordIdsMap.get(sobject[lookup]);
+        if (sobject[lookup] && !(sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook' && lookup === 'Pricebook2Id')) {
+          sobject[lookup] = recordIdsMap.get(sobject[lookup]);
+        }   
       }
 
       // Replace Record Types, if any
@@ -96,21 +119,57 @@ export default class Import extends SfdxCommand {
         sobject.RecordTypeId = recTypeInfos.get(sobject.RecordTypeId);
       }
 
-      //delete product.attributes;
+      // If object is PricebookEntry, use standard price book from target org
+      if (sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook') {
+        sobject.Pricebook2Id = standardPriceBookId;
+      }
+
+      // If object was already inserted in a previous batch, add Id to update it
+      if (recordIdsMap.get(sobject.attributes.referenceId)) {
+        sobject.Id = recordIdsMap.get(sobject.attributes.referenceId);
+      }
     }
   }
 
-  private async insertData(records: Array<any>, sobjectName: string) {
-    // Using jsforce directly to be able to create several records in one call
-    // https://jsforce.github.io/blog/posts/20180726-jsforce19-features.html
-    // https://github.com/forcedotcom/sfdx-core/issues/141
+  private async upsertData(records: Array<any>, sobjectName: string) {
     
-    // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-    const sobjectsResult:Array<RecordResult> = await conn.sobject(sobjectName).create(records, { allowRecursive: true, allOrNone: true })
-                                                                              .catch(err => {
-                                                                                throw new SfdxError(`Error importing records: ${err}`);
-                                                                              });
+    let sobjectsResult:Array<RecordResult> = new Array<RecordResult>();
 
+    // So far, a whole file will be either inserted or updated
+    if (records[0] && records[0].Id) {
+      // There is an Id, so it's an update
+      this.debug(`DEBUG updating ${sobjectName} records`);
+
+      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+      sobjectsResult = await conn.sobject(sobjectName).update(records, { allowRecursive: true, allOrNone: true })
+                                                      .catch(err => {
+                                                        throw new SfdxError(`Error importing records: ${err}`);
+                                                      });
+    }
+    else {
+      // No Id, insert
+      this.debug(`DEBUG inserting ${sobjectName} records`);
+
+      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+      sobjectsResult = await conn.sobject(sobjectName).insert(records, { allowRecursive: true, allOrNone: true })
+                                                      .catch(err => {
+                                                        throw new SfdxError(`Error importing records: ${err}`);
+                                                      });
+    }
+
+    // Some errors are part of RecordResult but don't throw an exception
+    for (let i = 0; i < sobjectsResult.length; i++) {
+      
+      if (!sobjectsResult[i].success) {
+        const res:ErrorResult = sobjectsResult[i] as ErrorResult;
+        const errors:ErrorResultDetail = res.errors[0] as any;
+        // TODO: add a flag to allow this to be added to the logs
+        if (errors.statusCode !== 'ALL_OR_NONE_OPERATION_ROLLED_BACK') {
+          this.ux.error(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields.length > 0?'('+errors.fields+')':''}`);
+        }
+      }
+    }
+    
     // Update the map of Refs/Ids
     this.updateMapIdRef(records, sobjectsResult, recordIdsMap);
   }
@@ -166,11 +225,19 @@ export default class Import extends SfdxCommand {
       throw new SfdxError(`Invalid file name: ${filePath}`);
     }
 
-    // From 1-MyCustomObject__c.json to MyCustomObject__c
-    return filePath.substring(filePath.indexOf("-") + 1).replace(".json", "");
+    // From 1-MyCustomObject__c.json or 1-MyCustomObject-MyLabel__c.json to MyCustomObject__c
+    let fileName: string = '';
+    fileName = filePath.substring(filePath.indexOf("-") + 1).replace(".json", "");
+    if (fileName.indexOf("-") > 0) {
+      // Format is 1-MyCustomObject-MyLabel__c.json
+      fileName = fileName.substring(0, fileName.indexOf("-"));
+    }
+
+    return fileName;
   }
 
   private async getLookupsForObject(objectName: string) {
+
     let lookups = [];
     const describeResult = await conn.sobject(objectName).describe();
 

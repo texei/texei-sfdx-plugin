@@ -1,6 +1,6 @@
 *-debug.log
 *-error.log
-.oclif.manifest.json
+oclif.manifest.json
 /dist
 /lib
 /package-lock.json

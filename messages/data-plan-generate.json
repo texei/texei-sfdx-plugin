@@ -1,0 +1,5 @@
+{
+  "commandDescription": "generate a data plan used to export objects' data from org",
+  "objectsFlagDescription": "comma-separated list of objects to add to the data plan",
+  "outputdirFlagDescription": "directory where to store the data plan file"
+}
