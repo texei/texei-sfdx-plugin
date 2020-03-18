@@ -59,56 +59,70 @@ export default class CleanOrg extends SfdxCommand {
 
     // Read files
     const readDir = util.promisify(fs.readdir);
-    let layoutsFiles = await readDir(filesPath, "utf8");
-    // Don't know why metadata API retrieved & as %26 whereas other characters are ok. Hardcoding for now (booo)
-    layoutsFiles = layoutsFiles.map(x => x.replace('.layout-meta.xml','').replace('%26','&').replace('%27','\''));
-    
-    // Only look at standard objects
-    let standardObjects:Set<String> = new Set<String>(layoutsFiles.map(x => {
-      const obj = x.split('-')[0];
-      if (!obj.includes('__')) {
-        // Should be enough to know if it's a standard object
-        return obj;
+    let layoutsFiles = await readDir(filesPath, "utf8").catch(err => {
+      if (err.code === 'ENOENT') {
+        const noent = 'No layouts folder found';
+        this.ux.log(noent);
+        deletedLayouts.push(noent);
       }
-    }));
-    standardObjects.delete(undefined);
-
-    // Query the org to get layouts for these standard objects
-    const conn = this.org.getConnection();
-    const objectList:string = `'${Array.from(standardObjects).join().replace(/,/gi,'\',\'')}'`;
-    const query = `Select TableEnumOrId, Name from Layout where TableEnumOrId IN (${objectList}) order by TableEnumOrId`;
-    const results = await conn.tooling.query(query) as any;
-
-    let layoutsOnOrg:Set<String> = new Set<String>();
-    for (const layout of results.records) {
-      layoutsOnOrg.add(`${layout.TableEnumOrId}-${layout.Name}`);
-    }
-
-    const layoutsToDelete:string[] = Array.from(layoutsOnOrg).filter(lay => layoutsFiles.includes(lay) ? undefined : lay) as string[];
-
-    if (layoutsToDelete.length > 0) {
-
-      // TODO: log after delete, once errors are handled correctly
-      this.ux.log(`Deleting layouts:`);
-      for (const lay of layoutsToDelete) {
-        this.ux.log(lay);
+      else {
+        this.ux.error(err);
       }
+    });
 
-      // Use metadata API so that this won't be visible in force:source:status
-      // This call is limited to 10 records, splitting (maybe refactor later to use destructiveChanges.xml)
-      let promises: Array<Promise<SaveResult | SaveResult[]>> = new Array<Promise<SaveResult | SaveResult[]>>();
+    if (layoutsFiles) {
+        
+      // Don't know why metadata API retrieved & as %26 whereas other characters are ok. Hardcoding for now (booo)
+      layoutsFiles = layoutsFiles.map(x => x.replace('.layout-meta.xml','').replace('%26','&').replace('%27','\''));
       
-      while(layoutsToDelete.length) { 
-        promises.push(conn.metadata.delete('Layout', layoutsToDelete.splice(0,10)));
+      // Only look at standard objects
+      let standardObjects:Set<String> = new Set<String>(layoutsFiles.map(x => {
+        const obj = x.split('-')[0];
+        if (!obj.includes('__')) {
+          // Should be enough to know if it's a standard object
+          return obj;
+        }
+      }));
+      standardObjects.delete(undefined);
+
+      // Query the org to get layouts for these standard objects
+      const conn = this.org.getConnection();
+      const objectList:string = `'${Array.from(standardObjects).join().replace(/,/gi,'\',\'')}'`;
+      const query = `Select TableEnumOrId, Name from Layout where TableEnumOrId IN (${objectList}) order by TableEnumOrId`;
+      const results = await conn.tooling.query(query) as any;
+
+      let layoutsOnOrg:Set<String> = new Set<String>();
+      for (const layout of results.records) {
+        layoutsOnOrg.add(`${layout.TableEnumOrId}-${layout.Name}`);
       }
-      
-      // TODO: handle errors correctly
-      await Promise.all(promises);
+
+      const layoutsToDelete:string[] = Array.from(layoutsOnOrg).filter(lay => layoutsFiles.includes(lay) ? undefined : lay) as string[];
+
+      if (layoutsToDelete.length > 0) {
+
+        // TODO: log after delete, once errors are handled correctly
+        this.ux.log(`Deleting layouts:`);
+        for (const lay of layoutsToDelete) {
+          this.ux.log(lay);
+          deletedLayouts.push(lay);
+        }
+
+        // Use metadata API so that this won't be visible in force:source:status
+        // This call is limited to 10 records, splitting (maybe refactor later to use destructiveChanges.xml)
+        let promises: Array<Promise<SaveResult | SaveResult[]>> = new Array<Promise<SaveResult | SaveResult[]>>();
+        
+        while(layoutsToDelete.length) { 
+          promises.push(conn.metadata.delete('Layout', layoutsToDelete.splice(0,10)));
+        }
+        
+        // TODO: handle errors correctly
+        await Promise.all(promises);
+      }
+      else {
+        this.ux.log(`Nothing to delete.`);
+      }
     }
-    else {
-      this.ux.log(`Nothing to delete.`);
-    }
-    
+
     return { deleted: deletedLayouts };
   }
 }
