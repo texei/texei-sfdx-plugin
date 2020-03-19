@@ -30,7 +30,8 @@ export default class Install extends SfdxCommand {
     securitytype: flags.string({ char: 's', required: false, description: "security access type for the installed package (see force:package:install for default value)" }),
     namespaces: flags.string({ char: 'n', required: false, description: 'filter package installation by namespace' }),
     wait: flags.number({ char: 'w', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' }),
-    noprompt: flags.boolean({ char: 'r', required: false, description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' })
+    noprompt: flags.boolean({ char: 'r', required: false, description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' }),
+    apexcompile: flags.string({ char: 'a', required: false, description: "compile all Apex in the org and package, or only Apex in the package (see force:package:install for default value)" })
   };
 
   // Comment this out if your command does not require an org username
@@ -140,6 +141,12 @@ export default class Install extends SfdxCommand {
 
     if (packagesToInstall.length > 0) { // Installing Packages
 
+      // Checking previously installed packages
+      this.debug('DEBUG looking for already installed packages');
+      const conn = this.org.getConnection();
+      const installedPackagesQuery = 'Select SubscriberPackageVersionId from InstalledSubscriberPackage';
+      const installedPackageIds = ((await conn.tooling.query(installedPackagesQuery)).records as any).map(x => x.SubscriberPackageVersionId);
+
       // Getting Installation Key(s)
       let installationKeys = this.flags.installationkeys;
       if (installationKeys) {
@@ -164,7 +171,8 @@ export default class Install extends SfdxCommand {
       let i = 0;
       for (let packageInfo of packagesToInstall) {
         packageInfo = packageInfo as JsonMap;
-        if (result.installedPackages.hasOwnProperty(packageInfo.packageVersionId)) {
+        if (result.installedPackages.hasOwnProperty(packageInfo.packageVersionId)
+            || installedPackageIds.includes(packageInfo.packageVersionId)) {
           this.ux.log(`PackageVersionId ${packageInfo.packageVersionId} already installed. Skipping...`);
           continue;
         }
@@ -191,6 +199,12 @@ export default class Install extends SfdxCommand {
         if (this.flags.securitytype) {
           args.push('--securitytype');
           args.push(`${this.flags.securitytype}`);
+        }
+
+        // APEX COMPILE
+        if (this.flags.apexcompile) {
+          args.push('--apexcompile');
+          args.push(`${this.flags.apexcompile}`);
         }
         
         // WAIT
@@ -260,8 +274,8 @@ export default class Install extends SfdxCommand {
       query += ' ORDER BY BuildNumber DESC Limit 1';
 
       // Query DevHub to get the expected Package2Version
-      const conn = this.hubOrg.getConnection();
-      const resultPackageId = await conn.tooling.query(query) as any;
+      const connDevHub = this.hubOrg.getConnection();
+      const resultPackageId = await connDevHub.tooling.query(query) as any;
 
       if (resultPackageId.size > 0) {
         packageId = resultPackageId.records[0].SubscriberPackageVersionId;
