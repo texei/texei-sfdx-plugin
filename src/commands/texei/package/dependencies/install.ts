@@ -30,7 +30,8 @@ export default class Install extends SfdxCommand {
     securitytype: flags.string({ char: 's', required: false, description: "security access type for the installed package (see force:package:install for default value)" }),
     namespaces: flags.string({ char: 'n', required: false, description: 'filter package installation by namespace' }),
     wait: flags.number({ char: 'w', required: false, description: 'number of minutes to wait for installation status (also used for publishwait). Default is 10' }),
-    noprompt: flags.boolean({ char: 'r', required: false, description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' })
+    noprompt: flags.boolean({ char: 'r', required: false, description: 'allow Remote Site Settings and Content Security Policy websites to send or receive data without confirmation' }),
+    apexcompile: flags.string({ char: 'a', required: false, description: "compile all Apex in the org and package, or only Apex in the package (see force:package:install for default value)" })
   };
 
   // Comment this out if your command does not require an org username
@@ -198,6 +199,12 @@ export default class Install extends SfdxCommand {
         if (this.flags.securitytype) {
           args.push('--securitytype');
           args.push(`${this.flags.securitytype}`);
+        }
+
+        // APEX COMPILE
+        if (this.flags.apexcompile) {
+          args.push('--apexcompile');
+          args.push(`${this.flags.apexcompile}`);
         }
         
         // WAIT
