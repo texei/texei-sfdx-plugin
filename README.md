@@ -67,7 +67,7 @@ EXAMPLE
      Data exported!
 ```
 
-_See code: [src/commands/texei/data/export.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/data/export.ts)_
+_See code: [src/commands/texei/data/export.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/data/export.ts)_
 
 ## `sfdx texei:data:import -d <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -98,7 +98,7 @@ EXAMPLE
      Data imported!
 ```
 
-_See code: [src/commands/texei/data/import.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/data/import.ts)_
+_See code: [src/commands/texei/data/import.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/data/import.ts)_
 
 ## `sfdx texei:data:plan:generate -d <string> -o <string> [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -125,7 +125,7 @@ EXAMPLE
   $ sfdx texei:data:plan:generate --objects Account,Contact,MyCustomObject__c --outputdir ./data
 ```
 
-_See code: [src/commands/texei/data/plan/generate.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/data/plan/generate.ts)_
+_See code: [src/commands/texei/data/plan/generate.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/data/plan/generate.ts)_
 
 ## `sfdx texei:org:contractfieldhistory:fix [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -153,7 +153,7 @@ EXAMPLE
   History tracking fixed.
 ```
 
-_See code: [src/commands/texei/org/contractfieldhistory/fix.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/org/contractfieldhistory/fix.ts)_
+_See code: [src/commands/texei/org/contractfieldhistory/fix.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/org/contractfieldhistory/fix.ts)_
 
 ## `sfdx texei:org:shape:extract [-d <string>] [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -188,7 +188,7 @@ EXAMPLE
   $ sfdx texei:org:shape:extract -u bulma@capsulecorp.com"
 ```
 
-_See code: [src/commands/texei/org/shape/extract.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/org/shape/extract.ts)_
+_See code: [src/commands/texei/org/shape/extract.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/org/shape/extract.ts)_
 
 ## `sfdx texei:package:dependencies:install [-k <string>] [-b <string>] [-p <string>] [-s <string>] [-n <string>] [-w <number>] [-r] [-a <string>] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -251,7 +251,7 @@ EXAMPLE
   $ texei:package:dependencies:install -u MyScratchOrg -v MyDevHub -k "1:MyPackage1Key 2: 3:MyPackage3Key" -b "DEV"
 ```
 
-_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/package/dependencies/install.ts)_
+_See code: [src/commands/texei/package/dependencies/install.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/package/dependencies/install.ts)_
 
 ## `sfdx texei:profile:clean [-k <string>] [-p <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -285,7 +285,7 @@ EXAMPLES
   custom-sfdx-source-folder/main/profiles,source-folder-2/main/profiles/myAdmin.profile-meta.xml
 ```
 
-_See code: [src/commands/texei/profile/clean.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/profile/clean.ts)_
+_See code: [src/commands/texei/profile/clean.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/profile/clean.ts)_
 
 ## `sfdx texei:sharingcalc:suspend [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -316,7 +316,7 @@ EXAMPLE
   Sharing calculations suspended
 ```
 
-_See code: [src/commands/texei/sharingcalc/suspend.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/sharingcalc/suspend.ts)_
+_See code: [src/commands/texei/sharingcalc/suspend.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/sharingcalc/suspend.ts)_
 
 ## `sfdx texei:skinnyprofile:retrieve [-t <string>] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -349,7 +349,7 @@ EXAMPLE
   $ texei:skinnyprofile:retrieve -u MyScratchOrg
 ```
 
-_See code: [src/commands/texei/skinnyprofile/retrieve.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/skinnyprofile/retrieve.ts)_
+_See code: [src/commands/texei/skinnyprofile/retrieve.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/skinnyprofile/retrieve.ts)_
 
 ## `sfdx texei:source:customlabel:replace -l <string> -v <string> [-p <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -373,7 +373,7 @@ EXAMPLE
   $ texei:source:customlabel:replace --label GreatSalesforceBlog --value https://blog.texei.com
 ```
 
-_See code: [src/commands/texei/source/customlabel/replace.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/source/customlabel/replace.ts)_
+_See code: [src/commands/texei/source/customlabel/replace.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/source/customlabel/replace.ts)_
 
 ## `sfdx texei:source:layouts:cleanorg [-p <string>] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -406,7 +406,7 @@ EXAMPLES
   $ texei:source:layouts:cleanorg --targetusername myScratchOrg --targetdevhubusername myDevHub
 ```
 
-_See code: [src/commands/texei/source/layouts/cleanorg.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/source/layouts/cleanorg.ts)_
+_See code: [src/commands/texei/source/layouts/cleanorg.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/source/layouts/cleanorg.ts)_
 
 ## `sfdx texei:user:update [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -438,5 +438,5 @@ EXAMPLES
   $ sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true" --json
 ```
 
-_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.1/src/commands/texei/user/update.ts)_
+_See code: [src/commands/texei/user/update.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.5.2/src/commands/texei/user/update.ts)_
 <!-- commandsstop -->
