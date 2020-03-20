@@ -66,8 +66,8 @@ export default class Suspend extends SfdxCommand {
     await page.goto(
       `${instanceUrl}/secur/frontdoor.jsp?sid=${
         this.org.getConnection().accessToken
-      }&startURL=${encodeURIComponent(SHARING_CALC_PATH)}`,
-      { waitUntil: ["load", "domcontentloaded", "networkidle0"] }
+      }`,
+      { waitUntil: ["domcontentloaded", "networkidle0"] }
     );
     const navigationPromise = page.waitForNavigation();
     await navigationPromise;
