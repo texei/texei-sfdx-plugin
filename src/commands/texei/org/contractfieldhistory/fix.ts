@@ -54,10 +54,9 @@ export default class Fix extends SfdxCommand {
       `${instanceUrl}/secur/frontdoor.jsp?sid=${
         this.org.getConnection().accessToken
       }&startURL=${encodeURIComponent(POST_LOGIN_PATH)}`,
-      { waitUntil: ["load", "domcontentloaded", "networkidle0"] }
+      { waitUntil: ["domcontentloaded", "networkidle0"] }
     );
     const navigationPromise = page.waitForNavigation();
-    await navigationPromise;
 
     this.debug(`DEBUG Opening Contract Field History Tracking page`);
     await page.goto(

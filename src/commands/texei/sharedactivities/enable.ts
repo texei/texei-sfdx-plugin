@@ -1,4 +1,4 @@
-import { flags, core, SfdxCommand } from "@salesforce/command";
+import { core, SfdxCommand } from "@salesforce/command";
 import * as puppeteer from "puppeteer";
 
 // Initialize Messages with the current plugin directory
@@ -8,30 +8,17 @@ core.Messages.importMessagesDirectory(__dirname);
 // or any library that is using the messages framework can also be loaded this way.
 const messages = core.Messages.loadMessages(
   "texei-sfdx-plugin",
-  "sharingcalc-suspend"
+  "sharedactivities-enable"
 );
 
-const mapSharingLabel = new Map([
-    ['sharingRule', 'Sharing Rule'],
-    ['groupMembership', 'Group Membership']
-  ]);
-
-export default class Suspend extends SfdxCommand {
+export default class Enable extends SfdxCommand {
   public static description = messages.getMessage("commandDescription");
 
   public static examples = [
-    `$ sfdx texei:sharingcalc:suspend" \nSharing calculations suspended\n`
+    `$ sfdx texei:sharedactivities:enable`
   ];
 
-  protected static flagsConfig = {
-    scope: flags.string({
-      char: "s",
-      description: messages.getMessage("scopeFlagDescription"),
-      required: false,
-      options: ["sharingRule", "groupMembership"],
-      default: "sharingRule"
-    })
-  };
+  protected static flagsConfig = {};
 
   // Comment this out if your command does not require an org username
   protected static requiresUsername = true;
@@ -45,17 +32,16 @@ export default class Suspend extends SfdxCommand {
   public async run(): Promise<any> {
     let result = {};
 
-    await this.suspendSharingCalc();
+    await this.enableSharedActivities();
 
     return result;
   }
 
-  private async suspendSharingCalc() {
+  private async enableSharedActivities() {
     const instanceUrl = this.org.getConnection().instanceUrl;
+    const ACTIVITIES_SETTINGS_PATH = "/setup/activitiesSetupPage.apexp";
 
-    const SHARING_CALC_PATH = "/p/own/DeferSharingSetupPage";
-
-    this.ux.startSpinner(`Suspending ${mapSharingLabel.get(this.flags.scope)} Calculations`, null, { stdout: true });
+    this.ux.startSpinner(`Enabling Shared Activities`, null, { stdout: true });
     this.debug(`DEBUG Login to Org`);
 
     const browser = await puppeteer.launch({
@@ -69,30 +55,22 @@ export default class Suspend extends SfdxCommand {
       }`,
       { waitUntil: ["domcontentloaded", "networkidle0"] }
     );
+
     const navigationPromise = page.waitForNavigation();
 
-    this.debug(`DEBUG Opening Defer Sharing Calculations page`);
-
-    await page.goto(`${instanceUrl + SHARING_CALC_PATH}`);
+    this.debug(`DEBUG Opening Activity Settings page`);
+    await page.goto(`${instanceUrl + ACTIVITIES_SETTINGS_PATH}`);
     await navigationPromise;
 
-    this.debug(`DEBUG Clicking 'Suspend' button`);
+    this.debug(`DEBUG Clicking 'Allow Users to Relate Multiple Contacts to Tasks and Events' checkbox`);
+    await page.click(
+        'input[id="thePage:theForm:theBlock:manyWhoPref"]'
+    );
 
-    // Suspend either Group Membership or Sharing Rules
-    if (this.flags.scope === "groupMembership") {
-      page.on("dialog", dialog => {
-        dialog.accept();
-      });
-
-      await page.click(
-        "#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
-      );
-    } else {
-      await page.click(
-        "#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
-      );
-    }
-
+    this.debug(`DEBUG Clicking 'Submit' button`);
+    await page.click(
+        'input[id="thePage:theForm:theBlock:buttons:submit"]'
+    );
     await navigationPromise;
 
     this.debug(`DEBUG Closing browser`);
@@ -101,6 +79,6 @@ export default class Suspend extends SfdxCommand {
 
     this.ux.stopSpinner("Done.");
 
-    return { message: `Suspended ${mapSharingLabel.get(this.flags.scope)} Calculations` };
+    return { message: `Enabled Shared Activities` };
   }
 }
