@@ -29,9 +29,8 @@ export default class Export extends SfdxCommand {
   public static description = messages.getMessage('commandDescription');
 
   public static examples = [
-  `$ sfdx texei:data:export --objects Account,Contact,MyCustomObject__c --outputdir ./data --targetusername texei
-  Data exported!
-  `
+  `sfdx texei:data:export --objects Account,Contact,MyCustomObject__c --outputdir ./data --targetusername texei`,
+  'sfdx texei:data:export --dataplan ./data/data-plan.json --outputdir ./data --targetusername texei'
   ];
 
   protected static flagsConfig = {
