@@ -1,0 +1,4 @@
+{
+    "commandDescription": "[BETA] Deploy ContractStatus metadata (for now only add new values)",
+    "pathToContractStatusSourceFile": "path to ContractStatus source file"
+}
