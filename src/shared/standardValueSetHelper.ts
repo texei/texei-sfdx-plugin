@@ -69,9 +69,11 @@ export class StandardValueSetHelper {
 
             // Click on New
             await this.page.waitForSelector('.bRelatedList:nth-child(6) > .listRelatedObject > .bPageBlock > .pbHeader > table > tbody > tr > .pbButton > .btn:nth-child(1)');
-            await this.page.click('.bRelatedList:nth-child(6) > .listRelatedObject > .bPageBlock > .pbHeader > table > tbody > tr > .pbButton > .btn:nth-child(1)');
-            await this.navigationPromise;
-    
+            await Promise.all([
+                this.page.click('.bRelatedList:nth-child(6) > .listRelatedObject > .bPageBlock > .pbHeader > table > tbody > tr > .pbButton > .btn:nth-child(1)'),
+                this.page.waitForNavigation()
+            ]);
+
             // label
             await this.page.waitForSelector('tbody #p1');
             await this.page.type('tbody #p1', label);
@@ -107,6 +109,70 @@ export class StandardValueSetHelper {
                 result = 'Done.';
             }
         }
+            
+        return new Promise((resolve, reject) => {
+            if (error) {
+                reject(error);
+            }
+            else {
+                resolve(result);
+            }
+        });
+    }
+
+    public async deleteValue(apiName: string): Promise<string> {
+
+        let result = '';
+        let error;
+
+        // Navigate to StandardValueSetPage page
+        const STANDARD_VALUE_SET_PATH = standardValueSetPaths.get(this._standardValueSetName);
+        await this.page.goto(`${this._connection.instanceUrl + STANDARD_VALUE_SET_PATH}`);
+        await this.navigationPromise;
+
+        // Be sure to validate confirmation pop-up
+        this.page.on("dialog", dialog => {
+            dialog.accept();
+        });
+
+        // TODO: Find which row to delete
+        // This might really break at some point but...
+        await this.page.waitForSelector('.listRelatedObject');
+        const element = await this.page.$$('.listRelatedObject');
+        const myHtml = await this.page.evaluate(el => el.innerHTML, element); 
+        console.log(myHtml);
+        // document.querySelectorAll('.listRelatedObject')[2].querySelectorAll('table')[1]
+        //http://www.javascripthive.info/javascript/access-tables-row-and-cell-using-javascript/
+        //const valuesTable = document.querySelectorAll('.listRelatedObject')[2].querySelector('table');
+        // TODO: Handle row not found
+        await this.page.waitForSelector('.list > tbody > .dataRow > .actionColumn > .actionLink:nth-child(2)');
+        await Promise.all([
+            this.page.click('.list > tbody > .dataRow > .actionColumn > .actionLink:nth-child(2)'),
+            this.page.waitForNavigation()
+        ]);
+
+        // TODO: Handle deletion not possible (only value for Category)
+        if (this.page.url().includes('picklist_masterdelete')) {
+
+            await this.page.waitForSelector('.pbBody');
+            const element = await this.page.$(".messageText");
+            const textError = await (await element.getProperty('textContent')).jsonValue();
+            console.log(textError);
+            error = `Something went wrong with value '${apiName}': ${textError}`;
+        }
+
+        // TODO: Handle possible other replacement value than blank
+        await this.page.waitForSelector('.last #ReplaceValueWithNullValue');
+        await this.page.click('.last #ReplaceValueWithNullValue');
+  
+        // Click Save
+        await this.page.waitForSelector('table > tbody > tr > #bottomButtonRow > .btn:nth-child(1)');
+        await Promise.all([
+            this.page.click('table > tbody > tr > #bottomButtonRow > .btn:nth-child(1)'),
+            this.page.waitForNavigation()
+        ]);
+
+        result = 'Done.';
             
         return new Promise((resolve, reject) => {
             if (error) {

@@ -59,7 +59,11 @@ export default class Deploy extends SfdxCommand {
 
     const svsh = new StandardValueSetHelper(this.org.getConnection(), 'ContractStatus');
     await svsh.init();
-
+    
+    /*****************/
+    await svsh.deleteValue('Activated');
+    /*****************/
+    /*
     for (const standardValueSet of contractStatusJson.StandardValueSet.standardValue) {
       this.ux.startSpinner(`Deploying ContractStatus value ${standardValueSet.label}/${standardValueSet.fullName}`, null, { stdout: true });
 
@@ -77,5 +81,6 @@ export default class Deploy extends SfdxCommand {
     await svsh.close();
 
     return { message: `ContractStatus deployed` };
+    */
   }
 }
