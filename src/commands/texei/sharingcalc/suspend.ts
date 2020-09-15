@@ -85,11 +85,11 @@ export default class Suspend extends SfdxCommand {
       });
 
       await page.click(
-        "#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
+        `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_suspend"].btn`
       );
     } else {
       await page.click(
-        "#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
+        '#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_suspend"].btn'
       );
     }
 
