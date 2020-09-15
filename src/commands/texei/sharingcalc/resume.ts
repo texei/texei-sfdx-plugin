@@ -8,7 +8,7 @@ core.Messages.importMessagesDirectory(__dirname);
 // or any library that is using the messages framework can also be loaded this way.
 const messages = core.Messages.loadMessages(
   "texei-sfdx-plugin",
-  "sharingcalc-suspend"
+  "sharingcalc-resume"
 );
 
 const mapSharingLabel = new Map([
@@ -16,11 +16,11 @@ const mapSharingLabel = new Map([
     ['groupMembership', 'Group Membership']
   ]);
 
-export default class Suspend extends SfdxCommand {
+export default class Resume extends SfdxCommand {
   public static description = messages.getMessage("commandDescription");
 
   public static examples = [
-    `$ sfdx texei:sharingcalc:suspend" \nSharing calculations suspended\n`
+    `$ sfdx texei:sharingcalc:resume" \nSharing calculations resumed\n`
   ];
 
   protected static flagsConfig = {
@@ -45,17 +45,17 @@ export default class Suspend extends SfdxCommand {
   public async run(): Promise<any> {
     let result = {};
 
-    await this.suspendSharingCalc();
+    await this.resumeSharingCalc();
 
     return result;
   }
 
-  private async suspendSharingCalc() {
+  private async resumeSharingCalc() {
     const instanceUrl = this.org.getConnection().instanceUrl;
 
     const SHARING_CALC_PATH = "/p/own/DeferSharingSetupPage";
 
-    this.ux.startSpinner(`Suspending ${mapSharingLabel.get(this.flags.scope)} Calculations`, null, { stdout: true });
+    this.ux.startSpinner(`Resuming ${mapSharingLabel.get(this.flags.scope)} Calculations`, null, { stdout: true });
     this.debug(`DEBUG Login to Org`);
 
     const browser = await puppeteer.launch({
@@ -76,20 +76,21 @@ export default class Suspend extends SfdxCommand {
     await page.goto(`${instanceUrl + SHARING_CALC_PATH}`);
     await navigationPromise;
 
-    this.debug(`DEBUG Clicking 'Suspend' button`);
+    this.debug(`DEBUG Clicking 'Resume' button`);
 
-    // Suspend either Group Membership or Sharing Rules
+    // Resume either Group Membership or Sharing Rules
     if (this.flags.scope === "groupMembership") {
-      page.on("dialog", dialog => {
-        dialog.accept();
-      });
-
       await page.click(
-        "#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
+        `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_resume"].btn`
+      );
+
+      // click the yes button to recaulcate group memberships immediately
+      await page.click(
+        `div#group_resume_dialog_buttons > input[value=" Yes "]`
       );
     } else {
       await page.click(
-        "#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
+        `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_resume"].btn`
       );
     }
 
@@ -101,6 +102,6 @@ export default class Suspend extends SfdxCommand {
 
     this.ux.stopSpinner("Done.");
 
-    return { message: `Suspended ${mapSharingLabel.get(this.flags.scope)} Calculations` };
+    return { message: `Resumed ${mapSharingLabel.get(this.flags.scope)} Calculations` };
   }
 }

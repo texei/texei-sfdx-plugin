@@ -8,19 +8,18 @@ core.Messages.importMessagesDirectory(__dirname);
 // or any library that is using the messages framework can also be loaded this way.
 const messages = core.Messages.loadMessages(
   "texei-sfdx-plugin",
-  "sharingcalc-suspend"
+  "sharingcalc-recalculate"
 );
 
 const mapSharingLabel = new Map([
-    ['sharingRule', 'Sharing Rule'],
-    ['groupMembership', 'Group Membership']
+    ['sharingRule', 'Sharing Rule']
   ]);
 
-export default class Suspend extends SfdxCommand {
+export default class Recalculate extends SfdxCommand {
   public static description = messages.getMessage("commandDescription");
 
   public static examples = [
-    `$ sfdx texei:sharingcalc:suspend" \nSharing calculations suspended\n`
+    `$ sfdx texei:sharingcalc:recalculate" \nRecalculated Sharing Rules\n`
   ];
 
   protected static flagsConfig = {
@@ -28,7 +27,7 @@ export default class Suspend extends SfdxCommand {
       char: "s",
       description: messages.getMessage("scopeFlagDescription"),
       required: false,
-      options: ["sharingRule", "groupMembership"],
+      options: ["sharingRule"],
       default: "sharingRule"
     })
   };
@@ -45,17 +44,17 @@ export default class Suspend extends SfdxCommand {
   public async run(): Promise<any> {
     let result = {};
 
-    await this.suspendSharingCalc();
+    await this.reclaculateSharing();
 
     return result;
   }
 
-  private async suspendSharingCalc() {
+  private async reclaculateSharing() {
     const instanceUrl = this.org.getConnection().instanceUrl;
 
     const SHARING_CALC_PATH = "/p/own/DeferSharingSetupPage";
 
-    this.ux.startSpinner(`Suspending ${mapSharingLabel.get(this.flags.scope)} Calculations`, null, { stdout: true });
+    this.ux.startSpinner(`Resuming ${mapSharingLabel.get(this.flags.scope)} Calculations`, null, { stdout: true });
     this.debug(`DEBUG Login to Org`);
 
     const browser = await puppeteer.launch({
@@ -76,22 +75,11 @@ export default class Suspend extends SfdxCommand {
     await page.goto(`${instanceUrl + SHARING_CALC_PATH}`);
     await navigationPromise;
 
-    this.debug(`DEBUG Clicking 'Suspend' button`);
+    this.debug(`DEBUG Clicking 'Recalculate' button`);
 
-    // Suspend either Group Membership or Sharing Rules
-    if (this.flags.scope === "groupMembership") {
-      page.on("dialog", dialog => {
-        dialog.accept();
-      });
-
-      await page.click(
-        "#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
-      );
-    } else {
-      await page.click(
-        "#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > .btn"
-      );
-    }
+    await page.click(
+      `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_recalc"].btn`
+    );
 
     await navigationPromise;
 
@@ -101,6 +89,6 @@ export default class Suspend extends SfdxCommand {
 
     this.ux.stopSpinner("Done.");
 
-    return { message: `Suspended ${mapSharingLabel.get(this.flags.scope)} Calculations` };
+    return { message: `Recalculated ${mapSharingLabel.get(this.flags.scope)}s` };
   }
 }
