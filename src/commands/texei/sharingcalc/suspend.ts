@@ -78,19 +78,23 @@ export default class Suspend extends SfdxCommand {
 
     this.debug(`DEBUG Clicking 'Suspend' button`);
 
-    // Suspend either Group Membership or Sharing Rules
-    if (this.flags.scope === "groupMembership") {
-      page.on("dialog", dialog => {
-        dialog.accept();
-      });
+    try {
+      // Suspend either Group Membership or Sharing Rules
+      if (this.flags.scope === "groupMembership") {
+        page.on("dialog", dialog => {
+          dialog.accept();
+        });
 
-      await page.click(
-        `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_suspend"].btn`
-      );
-    } else {
-      await page.click(
-        '#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_suspend"].btn'
-      );
+        await page.click(
+          `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_suspend"].btn`
+        );
+      } else {
+        await page.click(
+          '#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_suspend"].btn'
+        );
+      }
+    } catch (ex) {
+      console.log('Unable to suspend sharing.', ex.message);
     }
 
     await navigationPromise;

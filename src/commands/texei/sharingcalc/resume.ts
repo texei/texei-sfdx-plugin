@@ -78,20 +78,24 @@ export default class Resume extends SfdxCommand {
 
     this.debug(`DEBUG Clicking 'Resume' button`);
 
-    // Resume either Group Membership or Sharing Rules
-    if (this.flags.scope === "groupMembership") {
-      await page.click(
-        `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_resume"].btn`
-      );
+    try {
+      // Resume either Group Membership or Sharing Rules
+      if (this.flags.scope === "groupMembership") {
+        await page.click(
+          `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_resume"].btn`
+        );
 
-      // click the yes button to recaulcate group memberships immediately
-      await page.click(
-        `div#group_resume_dialog_buttons > input[value=" Yes "]`
-      );
-    } else {
-      await page.click(
-        `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_resume"].btn`
-      );
+        // click the yes button to recaulcate group memberships immediately
+        await page.click(
+          `div#group_resume_dialog_buttons > input[value=" Yes "]`
+        );
+      } else {
+        await page.click(
+          `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_resume"].btn`
+        );
+      }
+    } catch (ex) {
+      console.log('Unable to resume sharing.', ex.message);
     }
 
     await navigationPromise;

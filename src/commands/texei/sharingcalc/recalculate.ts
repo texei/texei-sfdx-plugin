@@ -77,9 +77,13 @@ export default class Recalculate extends SfdxCommand {
 
     this.debug(`DEBUG Clicking 'Recalculate' button`);
 
-    await page.click(
-      `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_recalc"].btn`
-    );
+    try {
+      await page.click(
+        `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_recalc"].btn`
+      );
+    } catch (ex) {
+      console.log('Unable to recalculate sharing.', ex.message);
+    }
 
     await navigationPromise;
 
