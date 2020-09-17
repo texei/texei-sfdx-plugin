@@ -28,6 +28,8 @@ Link the plugin: sfdx plugins:link .
 * [`sfdx texei:package:dependencies:install [-k <string>] [-b <string>] [-p <string>] [-s <string>] [-n <string>] [-w <number>] [-r] [-a <string>] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeipackagedependenciesinstall--k-string--b-string--p-string--s-string--n-string--w-number--r--a-string--v-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:profile:clean [-k <string>] [-p <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeiprofileclean--k-string--p-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:sharedactivities:enable [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeisharedactivitiesenable--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx texei:sharingcalc:recalculate [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeisharingcalcrecalculate--s-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx texei:sharingcalc:resume [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeisharingcalcresume--s-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:sharingcalc:suspend [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeisharingcalcsuspend--s-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:skinnyprofile:retrieve [-t <string>] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeiskinnyprofileretrieve--t-string--v-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:source:customlabel:replace -l <string> -v <string> [-p <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeisourcecustomlabelreplace--l-string--v-string--p-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
@@ -315,13 +317,75 @@ EXAMPLE
 
 _See code: [src/commands/texei/sharedactivities/enable.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.6.3/src/commands/texei/sharedactivities/enable.ts)_
 
+## `sfdx texei:sharingcalc:recalculate [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+suspend sharing calculation
+
+```
+USAGE
+  $ sfdx texei:sharingcalc:recalculatte [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel
+  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -s, --scope=sharingRule                                                           [default: sharingRule] scope of
+                                                                                    recalculation
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+EXAMPLE
+  $ sfdx texei:sharingcalc:recalculate"
+  Recalculated Sharing Rules
+```
+
+_See code: [src/commands/texei/sharingcalc/recalculate.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.6.3/src/commands/texei/sharingcalc/recalculate.ts)_
+
+## `sfdx texei:sharingcalc:resume [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+resume sharing calculation
+
+```
+USAGE
+  $ sfdx texei:sharingcalc:resume [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel
+  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -s, --scope=sharingRule|groupMembership                                           [default: sharingRule] scope of
+                                                                                    resumed calculations
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+EXAMPLE
+  $ sfdx texei:sharingcalc:resume"
+  Sharing calculations resumeed
+```
+
+_See code: [src/commands/texei/sharingcalc/suspend.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.6.3/src/commands/texei/sharingcalc/suspend.ts)_
+
 ## `sfdx texei:sharingcalc:suspend [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 suspend sharing calculation
 
 ```
 USAGE
-  $ sfdx texei:sharingcalc:suspend [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
+  $ sfdx texei:sharingcalc:suspend [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel
   trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
 
 OPTIONS
@@ -340,7 +404,7 @@ OPTIONS
                                                                                     this command invocation
 
 EXAMPLE
-  $ sfdx texei:sharingcalc:suspend" 
+  $ sfdx texei:sharingcalc:suspend"
   Sharing calculations suspended
 ```
 
