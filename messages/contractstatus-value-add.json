@@ -1,0 +1,5 @@
+{
+  "commandDescription": "add a value to Contract Status picklist",
+  "labelFlagDescription": "label of the Contract Status value to add",
+  "apiNameFlagDescription": "API Name of the Contract Status value to add"
+}
