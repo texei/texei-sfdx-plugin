@@ -36,6 +36,11 @@ export default class Import extends SfdxCommand {
       char: "d",
       description: messages.getMessage("inputFlagDescription"),
       required: true
+    }),
+    allornone: flags.boolean({
+      char: "a",
+      description: messages.getMessage("allOrNoneFlagDescription"),
+      required: false
     })
   };
 
@@ -141,7 +146,7 @@ export default class Import extends SfdxCommand {
       this.debug(`DEBUG updating ${sobjectName} records`);
 
       // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-      sobjectsResult = await conn.sobject(sobjectName).update(records, { allowRecursive: true, allOrNone: true })
+      sobjectsResult = await conn.sobject(sobjectName).update(records, { allowRecursive: true, allOrNone: this.flags.allornone })
                                                       .catch(err => {
                                                         throw new SfdxError(`Error importing records: ${err}`);
                                                       });
@@ -151,7 +156,7 @@ export default class Import extends SfdxCommand {
       this.debug(`DEBUG inserting ${sobjectName} records`);
 
       // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-      sobjectsResult = await conn.sobject(sobjectName).insert(records, { allowRecursive: true, allOrNone: true })
+      sobjectsResult = await conn.sobject(sobjectName).insert(records, { allowRecursive: true, allOrNone: this.flags.allornone })
                                                       .catch(err => {
                                                         throw new SfdxError(`Error importing records: ${err}`);
                                                       });

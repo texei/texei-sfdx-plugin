@@ -1,4 +1,5 @@
 {
     "commandDescription": "import objects' data to org",
-    "inputFlagDescription": "directory with files to import"
+    "inputFlagDescription": "directory with files to import",
+    "allOrNoneFlagDescription": "any failed records in a call cause all changes for the call to be rolled back"
 }
