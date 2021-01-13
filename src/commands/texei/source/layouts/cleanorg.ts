@@ -73,7 +73,13 @@ export default class CleanOrg extends SfdxCommand {
     if (layoutsFiles) {
         
       // Don't know why metadata API retrieved & as %26 whereas other characters are ok. Hardcoding for now (booo)
-      layoutsFiles = layoutsFiles.map(x => x.replace('.layout-meta.xml','').replace('%26','&').replace('%27','\''));
+      layoutsFiles = layoutsFiles.map(x => x.replace('.layout-meta.xml','')
+                                            .replace('%26','&')
+                                            .replace('%27','\'')
+                                            .replace('%28','(')
+                                            .replace('%29',')')
+                                            .replace('%5B','[')
+                                            .replace('%5D',']'));
       
       // Only look at standard objects
       let standardObjects:Set<String> = new Set<String>(layoutsFiles.map(x => {
