@@ -5,14 +5,11 @@ const standardValueSetPaths = new Map([
     ['ContractStatus', '/_ui/common/config/field/StandardFieldAttributes/d?id=Status&type=Contract']
 ]);
 
-// TODO: look how to handle languages
-/*
 const contractStatusCategory = new Map([
-    ['D', 'Draft'],
-    ['A', 'Activated'],
-    ['P', 'In Approval Process']
+    ['Draft', 'D'],
+    ['Activated', 'A'],
+    ['InApprovalProcess', 'P']
 ]);
-*/
 
 export class StandardValueSetHelper {
 
@@ -53,7 +50,7 @@ export class StandardValueSetHelper {
         }
     }
 
-    public async addValue(label: string, apiName: string): Promise<string> {
+    public async addValue(label: string, apiName: string, statusCategory: string): Promise<string> {
 
         if (!this.browser) {
             await this.init();
@@ -93,7 +90,7 @@ export class StandardValueSetHelper {
                 // TODO: Handle other Category than Draft
                 await this.page.waitForSelector('tbody #p5');
                 await this.page.click('tbody #p5');
-                await this.page.select('tbody #p5', 'D');
+                await this.page.select('tbody #p5', contractStatusCategory.get(statusCategory));
             }
 
             // Click Save

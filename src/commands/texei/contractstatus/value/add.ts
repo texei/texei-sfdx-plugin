@@ -20,7 +20,8 @@ export default class Add extends SfdxCommand {
 
   protected static flagsConfig = {
     label: flags.string({char: 'l', description: messages.getMessage('labelFlagDescription'), required: true}),
-    apiname: flags.string({char: 'a', description: messages.getMessage('apiNameFlagDescription'), required: true}) 
+    apiname: flags.string({char: 'a', description: messages.getMessage('apiNameFlagDescription'), required: true}),
+    statuscategory: flags.string({char: 's', description: messages.getMessage('statusCategoryFlagDescription'), options: ['Draft','Activated','InApprovalProcess'], default: 'Draft', required: false})
   };
 
   // Comment this out if your command does not require an org username
@@ -37,7 +38,7 @@ export default class Add extends SfdxCommand {
     this.ux.startSpinner(`Adding ContractStatus value (${this.flags.label}/${this.flags.apiname})`, null, { stdout: true });
 
     const svsh = new StandardValueSetHelper(this.org.getConnection(), 'ContractStatus');
-    await svsh.addValue(this.flags.label, this.flags.apiname);
+    await svsh.addValue(this.flags.label, this.flags.apiname, this.flags.statuscategory);
     await svsh.close();
 
     this.ux.stopSpinner('Done.');
