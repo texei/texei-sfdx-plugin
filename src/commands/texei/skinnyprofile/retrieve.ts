@@ -151,7 +151,7 @@ export default class Retrieve extends SfdxCommand {
     // @ts-ignore: Don't know why, but TypeScript doesn't see the callback as optional
     const parsed = await conn.metadata.retrieve(mypackage).stream().pipe(unzipper.Parse());
     
-    await new Promise(async (resolve, reject) => {
+    await new Promise<void>(async (resolve, reject) => {
       this.debug(`DEBUG Parsing retrieved package`);
       
       const readFile = util.promisify(fs.readFile);

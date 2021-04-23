@@ -2,7 +2,10 @@
   "extends": "./node_modules/@salesforce/dev-config/tsconfig",
   "compilerOptions": {
     "outDir": "./lib",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "lib": [
+      "dom"
+    ]
   },
   "include": [
     "./src/**/*"
