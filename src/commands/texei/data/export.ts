@@ -106,6 +106,11 @@ export default class Export extends SfdxCommand {
 
     const sObjectLabel = describeResult.label;
 
+    // If sObject can't be created, don't export it and throw an error
+    if (!describeResult.createable) {
+      throw new SfdxError(`Object ${sObjectLabel} can't be created (see Salesforce documentation), so you shoudn't export it.`);
+    }
+
     // Add fields to exclude, if any
     let fieldsToExclude = globallyExcludedFields ? globallyExcludedFields : [];
     if (sobject.excludedFields) {
@@ -113,6 +118,7 @@ export default class Export extends SfdxCommand {
     }
 
     for (const field of describeResult.fields) {
+
       if (field.createable && !fieldsToExclude.includes(field.name)) {
         
         fields.push(field.name);
@@ -144,7 +150,7 @@ export default class Export extends SfdxCommand {
     if (sobject.name === 'Pricebook2') {
       fields.push('IsStandard');
     }
-    
+
     // Query to get sObject data
     const recordQuery = `SELECT Id, ${fields.join()}
                          FROM ${sobject.name}
