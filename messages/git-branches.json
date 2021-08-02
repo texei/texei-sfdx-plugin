@@ -1,0 +1,5 @@
+{
+    "commandDescription": "Git operations",
+    "findbranchesFlagDescription": "Git find branches",
+    "deletebranchesFlagDescription": "Git delete searched branches"
+}
