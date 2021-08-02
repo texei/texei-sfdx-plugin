@@ -23,7 +23,8 @@ export default class Fix extends SfdxCommand {
   protected static flagsConfig = {
     //findall: flags.string({char: 'a', description: messages.getMessage('findallFlagDescription'), required: false}),
     findbranches: flags.string({char: 'f', description: messages.getMessage('findbranchesFlagDescription'), required: false}),
-    delete: flags.boolean({char: 'd', description: messages.getMessage('deletebranchesFlagDescription'), required: false})
+    delete: flags.boolean({char: 'd', description: messages.getMessage('deletebranchesFlagDescription'), required: false}),
+    showbranchdetails: flags.boolean({char: 's', description: messages.getMessage('showbranchdetailsFlagDescription'), required: false})
   };
 
   // Comment this out if your command does not require an org username
@@ -48,13 +49,17 @@ export default class Fix extends SfdxCommand {
             console.error(`${stderr}`);
             return;
         }
-
-        const branchToDelete = stdout.replace(/remotes\/origin\//g, ' ').replace(/ /g, '').replace(/\n/g, ' ');
         
+        console.log('Count of branches : ' + stdout.trim().split('\n').length);
+        const branchToDelete = stdout.replace(/remotes\/origin\//g, ' ').replace(/ /g, '').replace(/\n/g, ' ');
+
+        // Show all branches on the console
+        if (this.flags.showbranchdetails) {
           console.log(stdout);
+        }
           // it's ok
           if (this.flags.delete) {
-            if (branchToDelete.search("master") == -1) {
+            if (branchToDelete.search("master") == -1 && branchToDelete.search("main") == -1) {
             // Exec deletion
             exec(`git push origin --delete ${branchToDelete}`, (error, stdout, stderr) => {
               if (error) {
@@ -72,10 +77,9 @@ export default class Fix extends SfdxCommand {
           });
             }
             else {
-              console.log('Delete error: One branch of the selected results is or containing Master. Please add more filters.');
+              console.log('Delete error: One branch of the selected results is or containing "Master" or "Main". Please add more filters.');
               return;
             }
-      
       }
       });
     }
