@@ -23,7 +23,7 @@ export default class Fix extends SfdxCommand {
   protected static flagsConfig = {
     //findall: flags.string({char: 'a', description: messages.getMessage('findallFlagDescription'), required: false}),
     findbranches: flags.string({char: 'f', description: messages.getMessage('findbranchesFlagDescription'), required: false}),
-    delete: flags.string({char: 'd', description: messages.getMessage('deletebranchesFlagDescription'), required: false})
+    delete: flags.boolean({char: 'd', description: messages.getMessage('deletebranchesFlagDescription'), required: false})
   };
 
   // Comment this out if your command does not require an org username
@@ -41,26 +41,28 @@ export default class Fix extends SfdxCommand {
       //console.log(`stdout: ${this.flags.findbranches}`);
       exec(`git branch --all --list *${this.flags.findbranches}* | tr '*' ' '`, (error, stdout, stderr) => {
         if (error) {
-            console.log(`error: ${error.message}`);
+            console.error(`${error.message}`);
             return;
         }
         if (stderr) {
-            console.log(`stderr: ${stderr}`);
+            console.error(`${stderr}`);
             return;
         }
 
-        const branchToDelete = JSON.stringify(stdout.replace(/ /g, '').replace(/\n/g, ' '));
-        if (branchToDelete.search("master") == -1) {
+        const branchToDelete = stdout.replace(/remotes\/origin\//g, ' ').replace(/ /g, '').replace(/\n/g, ' ');
+        
+          console.log(stdout);
           // it's ok
           if (this.flags.delete) {
+            if (branchToDelete.search("master") == -1) {
             // Exec deletion
-            exec(`$ git push origin --delete *${branchToDelete}*`, (error, stdout, stderr) => {
+            exec(`git push origin --delete ${branchToDelete}`, (error, stdout, stderr) => {
               if (error) {
-                  console.log(`error: ${error.message}`);
+                  console.error(`${error.message}`);
                   return;
               }
               if (stderr) {
-                  console.log(`stderr: ${stderr}`);
+                  console.error(`${stderr}`);
                   return;
               }
               else {
@@ -68,15 +70,13 @@ export default class Fix extends SfdxCommand {
                 return;
               }
           });
-        }
-        else {
-          console.log('Error : One branch of the selected results is, or containing Master');
-          return;
-        }
+            }
+            else {
+              console.log('Delete error: One branch of the selected results is or containing Master. Please add more filters.');
+              return;
+            }
       
       }
-        console.log(JSON.stringify(stdout.replace(/ /g, '').replace(/\n/g, ' ')));
-
       });
     }
   }
