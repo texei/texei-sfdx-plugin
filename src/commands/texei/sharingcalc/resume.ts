@@ -1,4 +1,5 @@
 import { flags, core, SfdxCommand } from "@salesforce/command";
+import { SfdxError } from "@salesforce/core";
 import * as puppeteer from "puppeteer";
 
 // Initialize Messages with the current plugin directory
@@ -30,6 +31,12 @@ export default class Resume extends SfdxCommand {
       required: false,
       options: ["sharingRule", "groupMembership"],
       default: "sharingRule"
+    }),
+    timeout: flags.number({
+      char: "t",
+      description: messages.getMessage("commandTimeout"),
+      required: false,
+      default: 120000
     })
   };
 
@@ -42,10 +49,24 @@ export default class Resume extends SfdxCommand {
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
   protected static requiresProject = false;
 
+  private timeoutHandler = null;
+
   public async run(): Promise<any> {
     let result = {};
 
+    // Start timeout handler
+    this.timeoutHandler = setTimeout(() => {
+      if (this.timeoutHandler) {
+        throw new SfdxError("There has been a puppeteer timeout while processing Sharing Calc Resume operation");
+      }
+    } , this.flags.timeout);
+
+    // Process operation
     await this.resumeSharingCalc();
+
+    // Clear timeout handler
+    clearTimeout(this.timeoutHandler);
+    this.timeoutHandler = null ;
 
     return result;
   }
