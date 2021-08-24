@@ -1,13 +1,18 @@
 {
-  "extends": "./node_modules/@salesforce/dev-config/tsconfig",
   "compilerOptions": {
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "target": "es2019",
+    "lib": ["es2019", "dom"],
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "sourceMap": true,
+    "declaration": true,
     "outDir": "./lib",
-    "rootDir": "./src",
-    "lib": [
-      "dom"
-    ]
+    "importHelpers": true,
+    "resolveJsonModule": true,
+    "downlevelIteration": true,
+    "types": ["node"]
   },
-  "include": [
-    "./src/**/*"
-  ]
+  "include": ["./src/**/*"]
 }
