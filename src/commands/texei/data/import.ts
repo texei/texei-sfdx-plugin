@@ -119,11 +119,6 @@ export default class Import extends SfdxCommand {
         }   
       }
 
-      // Replace Record Types, if any
-      if (recTypeInfos.size > 0) {
-        sobject.RecordTypeId = recTypeInfos.get(sobject.RecordTypeId);
-      }
-
       // If object is PricebookEntry, use standard price book from target org
       if (sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook') {
         sobject.Pricebook2Id = standardPriceBookId;
