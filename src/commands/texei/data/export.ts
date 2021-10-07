@@ -10,6 +10,7 @@ interface DataPlan {
   name: string;
   label: string;
   filters: string;
+  lookupOverride: {}
   excludedFields: Array<string>;
 }
 
@@ -101,6 +102,8 @@ export default class Export extends SfdxCommand {
     // Query to retrieve creatable sObject fields
     let fields = [];
     let lookups = [];
+    let overriddenLookups = [];
+    let relationshipFields = [];
     let userFieldsReference = [];
     const describeResult = await conn.sobject(sobject.name).describe();
 
@@ -121,17 +124,34 @@ export default class Export extends SfdxCommand {
 
       if (field.createable && !fieldsToExclude.includes(field.name)) {
         
-        fields.push(field.name);
-        // If it's a lookup, also add it to the lookup list, to be replaced later
-        // Excluding OwnerId as we are not importing users anyway
-        if (field.referenceTo && field.referenceTo.length > 0 && field.name != 'OwnerId' && field.name != 'RecordTypeId') {
+        // If it's a lookup field and it's overridden, use the override 
+        if (sobject.lookupOverride[field.name]) {
+          this.debug(`Field found in override: ${field.name}`);
 
-          // If User is queried, use the reference, otherwise use the Scratch Org User
-          if (!objectList.find(x => x.name === 'User') && field.referenceTo.includes('User')) {
-            userFieldsReference.push(field.name);
+          if (!(field.referenceTo && field.referenceTo.length > 0)) {
+            throw new SfdxError(`Field ${field.name} is listed in lookupOverride but isn't a lookup field`);
           }
           else {
-            lookups.push(field.name);
+            overriddenLookups.push(field.relationshipName);
+            sobject.lookupOverride[field.name]?.split(',')?.forEach(relationshipField => {
+              relationshipFields.push(`${field.relationshipName}.${relationshipField}`);
+            });
+          }
+        }
+        else {
+          fields.push(field.name);
+
+          // If it's a lookup, also add it to the lookup list, to be replaced later
+          // Excluding OwnerId as we are not importing users anyway
+          if (field.referenceTo && field.referenceTo.length > 0 && field.name != 'OwnerId' && field.name != 'RecordTypeId') {
+
+            // If User is queried, use the reference, otherwise use the Scratch Org User
+            if (!objectList.find(x => x.name === 'User') && field.referenceTo.includes('User')) {
+              userFieldsReference.push(field.name);
+            }
+            else {
+              lookups.push(field.name);
+            }
           }
         }
       }
@@ -151,6 +171,11 @@ export default class Export extends SfdxCommand {
       fields.push('IsStandard');
     }
 
+    // Adding relationship fields from lookupOverride, if any
+    if (relationshipFields) {
+      fields = fields.concat(relationshipFields);
+    }
+
     // Query to get sObject data
     const recordQuery = `SELECT Id, ${fields.join()}
                          FROM ${sobject.name}
@@ -164,14 +189,14 @@ export default class Export extends SfdxCommand {
     const recordResults = (await conn.autoFetchQuery(recordQuery, options)).records;
 
     // Replace Lookup Ids + Record Type Ids by references
-    await this.cleanJsonRecord(sobject, sObjectLabel, recordResults, recordIdsMap, lookups, userFieldsReference);
+    await this.cleanJsonRecord(sobject, sObjectLabel, recordResults, recordIdsMap, lookups, overriddenLookups, userFieldsReference);
 
     return recordResults;
   }
 
   // Clean JSON to have the same output format as force:data:tree:export
   // Main difference: RecordTypeId is replaced by DeveloperName
-  private async cleanJsonRecord(sobject: DataPlan, objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
+  private async cleanJsonRecord(sobject: DataPlan, objectLabel: string, records, recordIdsMap, lookups: Array<string>, overriddenLookups: Array<string>, userFieldsReference: Array<string>,) {
 
     let refId = 0;
     // If this object was already exported before, start the numbering after the last one already used
@@ -208,6 +233,14 @@ export default class Export extends SfdxCommand {
       // Replace lookup Ids
       for (const lookup of lookups) {
         record[lookup] = recordIdsMap.get(record[lookup]);
+      }
+
+      // Replace overridden lookups
+      for (const lookup of overriddenLookups) {
+        if (record[lookup]) {
+          // If lookup isn't empty, remove useless information
+          delete record[lookup].attributes;
+        }
       }
 
       // Replace RecordTypeId with DeveloperName, to replace later with newly generated Id

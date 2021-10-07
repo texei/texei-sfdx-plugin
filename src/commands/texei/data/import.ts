@@ -97,7 +97,7 @@ export default class Import extends SfdxCommand {
 
   private async prepareDataForInsert(sobjectName: string, jsonData: any) {
     // TODO: Move getLookupsForObject here and check record types at the same time
-    const lookups: Array<string> = await this.getLookupsForObject(sobjectName);
+    const lookups: any[] = await this.getLookupsForObject(sobjectName);
     let recTypeInfos = new Map<string, string>();
 
     // Get Record Types information with newly generated Ids
@@ -114,9 +114,41 @@ export default class Import extends SfdxCommand {
 
       // Replace all lookups
       for (const lookup of lookups) {
-        if (sobject[lookup] && !(sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook' && lookup === 'Pricebook2Id')) {
-          sobject[lookup] = recordIdsMap.get(sobject[lookup]);
-        }   
+
+        // Regular lookups
+        if (sobject[lookup.name] && !(sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook' && lookup.name === 'Pricebook2Id')) {
+          sobject[lookup.name] = recordIdsMap.get(sobject[lookup.name]);
+        }
+
+        // Overridden lookups
+        if (sobject[lookup.relationshipName]) {
+          
+          //console.log(`### Overridden lookup found: ${lookup.relationshipName}:`);
+          //console.log(`Reference to: ${lookup.referenceTo}`);
+          //console.log(`fields to query: ${JSON.stringify(sobject[lookup.relationshipName])}`);
+
+          let fieldList = ['Id'];
+          let filterList = [];
+          for (const [key, value] of Object.entries(sobject[lookup.relationshipName])) {
+            fieldList.push(key);
+            filterList.push(`${key}='${value}'`);
+          }
+
+          // TODO: find a way not to query one row for every record to import
+          const query = `SELECT ${fieldList.join(',')} FROM ${lookup.referenceTo} WHERE ${filterList.join(' AND ')}`;
+          //console.log(`Query: ${query}`);
+
+          const queriedRecordId: any = ((await conn.query(
+            query
+          )).records[0] as any).Id;
+
+          // TODO: error if no record or several records found
+          console.log(`RecordId found: ${queriedRecordId}`);
+          
+          // Replace relationship name with field name + found Id
+          delete sobject[lookup.relationshipName];
+          sobject[lookup.name] = queriedRecordId;
+        }  
       }
 
       // Replace Record Types, if any
@@ -256,7 +288,7 @@ export default class Import extends SfdxCommand {
         field.name != "OwnerId" &&
         field.name != "RecordTypeId"
       ) {
-        lookups.push(field.name);
+        lookups.push(field);
       }
     }
 
