@@ -85,6 +85,7 @@ export default class Import extends SfdxCommand {
 
         const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
 
+        // TODO: If there is a lookupOverride, query all records from sObject
         await this.prepareDataForInsert(objectName, objectRecords);
         await this.upsertData(objectRecords, objectName);
 
@@ -130,8 +131,25 @@ export default class Import extends SfdxCommand {
           let fieldList = ['Id'];
           let filterList = [];
           for (const [key, value] of Object.entries(sobject[lookup.relationshipName])) {
-            fieldList.push(key);
-            filterList.push(`${key}='${value}'`);
+            this.debug(`key: ${key}`);
+            this.debug(`value: ${JSON.stringify(value)}`);
+
+            // Don't do anything if it's the "attributes" key containing technical info
+            if (key !== 'attributes') {
+              // If it's a string, replace leading and trailing " by ' for the query to work
+              // There is definitely a better way to do it
+              let fieldValue = JSON.stringify(value);
+              if (fieldValue.length >= 2
+                  && fieldValue.charAt(0) === `"`
+                  && fieldValue.charAt(fieldValue.length-1) === `"`) {
+                    
+                    fieldValue = `'${fieldValue.substring(1, fieldValue.length-1)}'`;
+              }
+              this.debug(`final field value: ${fieldValue}`);
+
+              fieldList.push(key);
+              filterList.push(`${key}=${fieldValue}`);
+            }
           }
 
           // TODO: find a way not to query one row for every record to import

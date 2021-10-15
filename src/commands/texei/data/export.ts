@@ -239,7 +239,8 @@ export default class Export extends SfdxCommand {
       for (const lookup of overriddenLookups) {
         if (record[lookup]) {
           // If lookup isn't empty, remove useless information
-          delete record[lookup].attributes;
+          // Keeping "type" so we don't have to do a describe to know what is the related sObject at import
+          delete record[lookup].attributes.url;
         }
       }
 
