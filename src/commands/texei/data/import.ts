@@ -15,6 +15,9 @@ const messages = Messages.loadMessages("texei-sfdx-plugin", "data-import");
 
 let conn: Connection;
 let recordIdsMap: Map<string, string>;
+let lookupOverrideMap: Map<string, Set<string>>;
+let queriedLookupOverrideRecords: Map<string, Record[]>;
+let remainingDataFiles: Set<string>;
 
 interface ErrorResultDetail {
   statusCode: string;
@@ -74,6 +77,9 @@ export default class Import extends SfdxCommand {
       return a.substr(0, a.indexOf('-'))-b.substr(0, b.indexOf('-'))
     });
     
+    // Used later to parse remaining files if a lookup override is found
+    remainingDataFiles = new Set(dataFiles);
+
     // Read and import data
     for (const dataFile of dataFiles) {
 
@@ -86,11 +92,23 @@ export default class Import extends SfdxCommand {
         const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
 
         // TODO: If there is a lookupOverride, query all records from sObject
+        // Parse file 1st record if there are lookup override
+        // If yes, collect all needed fields + Id, and query all records for all needed sObjects
+        // Create a map with constructed Ids from lookupOverride, mapped with the real record Id
+        // Use it later to replace correctly before insert
+        // Clean everything at the end
+        // Look for performance: maybe it's better once a file with a lookupOverride is found to:
+        // Pre-read all next files and see what sObjects are needed to see if we need to keep the query result
+        // Maybe do it at first from the very beginning to have all fields needed from all files ? (should be better)
+        // Also keep a number of files using the sObject, so that once it's not useful anymore we can clean the memory from list not useful anymore
+        // conn.bulk.query("SELECT Id, Name, NumberOfEmployees FROM Account")
         await this.prepareDataForInsert(objectName, objectRecords);
         await this.upsertData(objectRecords, objectName);
 
         this.ux.stopSpinner(`Done.`);
       }
+
+      remainingDataFiles.delete(dataFile);
     }
 
     return { message: "Data imported" };
@@ -123,46 +141,60 @@ export default class Import extends SfdxCommand {
 
         // Overridden lookups
         if (sobject[lookup.relationshipName]) {
+
+          this.debug(`### Overridden lookup found: ${lookup.relationshipName}:`);
+          this.debug(`Reference to: ${lookup.referenceTo}`);
+          this.debug(`fields to query: ${JSON.stringify(sobject[lookup.relationshipName])}`);
+
+          if (lookupOverrideMap === undefined) {
+            // If the first override we find, parse all files to get all needed fields
+            // Do it only know so that the command won't be slower if there is no override used
+            lookupOverrideMap = await this.createLookupOverrideMap();
+            queriedLookupOverrideRecords = new Map<string, Record[]>();
+          }
           
-          //console.log(`### Overridden lookup found: ${lookup.relationshipName}:`);
-          //console.log(`Reference to: ${lookup.referenceTo}`);
-          //console.log(`fields to query: ${JSON.stringify(sobject[lookup.relationshipName])}`);
+          const sObjectName = sobject[lookup.relationshipName].attributes.type;
+          let sObjectRecords: Record[];
 
-          let fieldList = ['Id'];
-          let filterList = [];
-          for (const [key, value] of Object.entries(sobject[lookup.relationshipName])) {
-            this.debug(`key: ${key}`);
-            this.debug(`value: ${JSON.stringify(value)}`);
-
-            // Don't do anything if it's the "attributes" key containing technical info
-            if (key !== 'attributes') {
-              // If it's a string, replace leading and trailing " by ' for the query to work
-              // There is definitely a better way to do it
-              let fieldValue = JSON.stringify(value);
-              if (fieldValue.length >= 2
-                  && fieldValue.charAt(0) === `"`
-                  && fieldValue.charAt(fieldValue.length-1) === `"`) {
-                    
-                    fieldValue = `'${fieldValue.substring(1, fieldValue.length-1)}'`;
-              }
-              this.debug(`final field value: ${fieldValue}`);
-
-              fieldList.push(key);
-              filterList.push(`${key}=${fieldValue}`);
-            }
+          if (queriedLookupOverrideRecords[sObjectName]) {
+            // Records already queried, use them
+            sObjectRecords = queriedLookupOverrideRecords[sObjectName];
+          }
+          else {
+            // Records not previously queried, do it now
+            sObjectRecords = await this.getObjectRecords(sObjectName, lookupOverrideMap[sObjectName]);
+            queriedLookupOverrideRecords[sObjectName] = sObjectRecords;
           }
 
-          // TODO: find a way not to query one row for every record to import
-          const query = `SELECT ${fieldList.join(',')} FROM ${lookup.referenceTo} WHERE ${filterList.join(' AND ')}`;
-          //console.log(`Query: ${query}`);
+          let filterList = Object.assign({}, sobject[lookup.relationshipName]);
+          delete filterList.attributes;
 
-          const queriedRecordId: any = ((await conn.query(
-            query
-          )).records[0] as any).Id;
+          //console.log(`filterList: ${JSON.stringify(filterList)}`);
 
-          // TODO: error if no record or several records found
-          console.log(`RecordId found: ${queriedRecordId}`);
+          const foundRecord = sObjectRecords.find(element => {
+            //console.log(element)
+            for (const [key, value] of Object.entries(filterList)) {
+              this.debug(`Looking for value ${value} for field ${key}`);
+              this.debug(`Value for current record: ${element[key]}`);
+
+              if (element[key] !== value) {
+                return;
+              }
+            }
+
+            return element;
+          });
+          //console.log(`foundRecord: ${JSON.stringify(foundRecord)}`);
+
+          // TODO: better output than Object.entries(filterList)
+          // Instead of looping for every record, create a map first from all needed values (so only one loop)
+          if (foundRecord === undefined) {
+            throw new SfdxError(`No ${lookup.referenceTo} record found for filter ${Object.entries(filterList)}`);
+          }
           
+          const queriedRecordId = foundRecord.Id;
+          console.log(`RecordId found: ${queriedRecordId}`);
+
           // Replace relationship name with field name + found Id
           delete sobject[lookup.relationshipName];
           sobject[lookup.name] = queriedRecordId;
@@ -311,5 +343,64 @@ export default class Import extends SfdxCommand {
     }
 
     return lookups;
+  }
+
+  private async createLookupOverrideMap(): Promise<Map<string, Set<string>>> {
+    let overrideMap: Map<string, Set<string>> = new Map<string, Set<string>>();
+
+    for (const dataFile of remainingDataFiles) {
+
+      // If file doesn't start with a number, just don't parse it (could be data-plan.json)
+      if (!isNaN(dataFile.substring(0,1) as any)) {
+        const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
+        if (objectRecords.length > 0) {
+          const currentRec = objectRecords[0];
+
+          // For all fields, look if one if a lookup override
+          for (const [key] of Object.entries(currentRec)) {
+
+            if (currentRec[key]?.attributes) {
+              const sobjectName = currentRec[key]?.attributes.type;
+              let fieldsToQuery: Set<string> = new Set<string>();
+
+              // If there is a lookup override, look all fields needed
+              for (const [objectkey] of Object.entries(currentRec[key])) {
+                
+                // Don't do anything if it's the "attributes" key containing technical info
+                if (objectkey !== 'attributes') {
+                  fieldsToQuery.add(objectkey);
+                }
+              }
+
+              // If there are already fields to query for this object, append them
+              if (overrideMap[sobjectName]) {
+                fieldsToQuery.forEach(item => overrideMap[sobjectName].add(item));
+              }
+              else {
+                // Else create the Set first
+                overrideMap[sobjectName] = new Set<string>();
+                fieldsToQuery.forEach(item => overrideMap[sobjectName].add(item));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return overrideMap;
+  }
+
+  private async getObjectRecords(sObjectName: string, fieldsToQuery: Set<string>): Promise<Record[]> {
+
+    let retrievedRecords: Record[] = [];
+
+    // In case it's not, add Id field
+    fieldsToQuery.add('Id');
+    
+    retrievedRecords = (await conn.query(
+      `Select ${Array.from(fieldsToQuery).join(',')} from ${sObjectName}`
+    )).records;
+
+    return retrievedRecords;
   }
 }
