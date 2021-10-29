@@ -125,7 +125,9 @@ export default class Export extends SfdxCommand {
       if (field.createable && !fieldsToExclude.includes(field.name)) {
         
         // If it's a lookup field and it's overridden, use the override 
-        if (sobject.lookupOverride[field.name]) {
+        if (sobject.lookupOverride
+            && sobject.lookupOverride[field.name]) {
+          
           this.debug(`Field found in override: ${field.name}`);
 
           if (!(field.referenceTo && field.referenceTo.length > 0)) {

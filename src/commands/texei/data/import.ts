@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { Record, RecordResult, SuccessResult, ErrorResult, Connection } from 'jsforce';
 const util = require("util");
+const csv = require("csvtojson");
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -169,10 +170,10 @@ export default class Import extends SfdxCommand {
           let filterList = Object.assign({}, sobject[lookup.relationshipName]);
           delete filterList.attributes;
 
-          //console.log(`filterList: ${JSON.stringify(filterList)}`);
+          const start = Date.now();
+          console.log(`Searching for record for lookup override`);
 
-          const foundRecord = sObjectRecords.find(element => {
-            //console.log(element)
+          const foundRecord = sObjectRecords.find(element => {            
             for (const [key, value] of Object.entries(filterList)) {
               this.debug(`Looking for value ${value} for field ${key}`);
               this.debug(`Value for current record: ${element[key]}`);
@@ -184,6 +185,9 @@ export default class Import extends SfdxCommand {
 
             return element;
           });
+          const duration = Date.now() - start;
+          console.log(`Finished searching record in ${duration} milliseconds`);
+          
           //console.log(`foundRecord: ${JSON.stringify(foundRecord)}`);
 
           // TODO: better output than Object.entries(filterList)
@@ -193,7 +197,7 @@ export default class Import extends SfdxCommand {
           }
           
           const queriedRecordId = foundRecord.Id;
-          console.log(`RecordId found: ${queriedRecordId}`);
+          console.log(`RecordId found (${queriedRecordId}) for sObject ${sObjectName} and filter ${Object.entries(filterList)}`);
 
           // Replace relationship name with field name + found Id
           delete sobject[lookup.relationshipName];
@@ -390,17 +394,43 @@ export default class Import extends SfdxCommand {
     return overrideMap;
   }
 
-  private async getObjectRecords(sObjectName: string, fieldsToQuery: Set<string>): Promise<Record[]> {
+  private async getObjectRecords(sObjectName: string, fieldsToQuery: Set<string>): Promise<Array<Record>> {
 
-    let retrievedRecords: Record[] = [];
+    const bulkQuery =  async (sObjectName: string, fieldsToQuery: Set<string>) => new Promise<Array<Record>>(async (resolve, reject) => {
+      let retrievedRecords: Array<Record> = new Array<Record>();
 
-    // In case it's not, add Id field
-    fieldsToQuery.add('Id');
-    
-    retrievedRecords = (await conn.query(
-      `Select ${Array.from(fieldsToQuery).join(',')} from ${sObjectName}`
-    )).records;
+      // In case it's not, add Id field
+      fieldsToQuery.add('Id');
 
-    return retrievedRecords;
+      conn.bulk.pollTimeout = 250000;
+      this.ux.log(`Querying ${sObjectName} for lookup override`);
+
+      // Manually reading stream instead on using jsforce directly
+      // Because jsforce will return '75008.0' instead of 75008 for a number
+      const recordStream = conn.bulk.query(
+        `Select ${Array.from(fieldsToQuery).join(',')} from ${sObjectName}`
+      );
+      const readStream = recordStream.stream();
+      const csvToJsonParser = csv({flatKeys: false, checkType: true});
+      readStream.pipe(csvToJsonParser);
+  
+      csvToJsonParser.on("data", (data) => {
+        retrievedRecords.push(JSON.parse(data.toString('utf8')));
+      });
+
+      recordStream.on("error", (error) => {
+        reject(error);
+      });
+  
+      csvToJsonParser.on("error", (error) => {
+        reject(error);
+      });
+  
+      csvToJsonParser.on("done", async () => {
+        resolve(retrievedRecords);
+      });
+    });
+
+    return await bulkQuery(sObjectName, fieldsToQuery);
   }
 }
