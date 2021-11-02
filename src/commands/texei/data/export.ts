@@ -147,7 +147,8 @@ export default class Export extends SfdxCommand {
     // Query to get sObject data
     const recordQuery = `SELECT Id, ${fields.join()}
                          FROM ${sobject.name}
-                         ${sobject.filters ? 'WHERE '+sobject.filters : ''}`;
+                         ${sobject.filters ? 'WHERE '+sobject.filters : ''}
+                         ${sobject.orderBy ? 'ORDER BY '+sobject.orderBy : ''}`;
     // API Default limit is 10 000, just check if we need to extend it
     const recordNumber:number = ((await conn.query(`Select count(Id) numberOfRecords from ${sobject.name}`)).records[0] as any).numberOfRecords;
     let options:ExecuteOptions = {};
