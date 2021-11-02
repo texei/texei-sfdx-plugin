@@ -6,13 +6,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 const util = require("util");
 
-interface DataPlan {
-  name: string;
-  label: string;
-  filters: string;
-  excludedFields: Array<string>;
-}
-
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
@@ -20,7 +13,7 @@ Messages.importMessagesDirectory(__dirname);
 // or any library that is using the messages framework can also be loaded this way.
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'data-export');
 let conn:Connection;
-let objectList:Array<DataPlan>;
+let objectList:Array<DataPlanSObject>;
 let lastReferenceIds: Map<string, number> = new Map<string, number>();
 let globallyExcludedFields: Array<string>;
 
@@ -67,7 +60,7 @@ export default class Export extends SfdxCommand {
     else if (this.flags.dataplan) {
       // Read objects list from file
       const readFile = util.promisify(fs.readFile);
-      const dataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
+      const dataPlan: DataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
       objectList = dataPlan.sObjects;
 
       // If there are some globally excluded fields, add them
@@ -96,7 +89,7 @@ export default class Export extends SfdxCommand {
     return { message: 'Data exported' };
   }
 
-  private async getsObjectRecords(sobject: DataPlan, recordIdsMap: Map<string, string>) {
+  private async getsObjectRecords(sobject: DataPlanSObject, recordIdsMap: Map<string, string>) {
 
     // Query to retrieve creatable sObject fields
     let fields = [];
@@ -171,7 +164,7 @@ export default class Export extends SfdxCommand {
 
   // Clean JSON to have the same output format as force:data:tree:export
   // Main difference: RecordTypeId is replaced by DeveloperName
-  private async cleanJsonRecord(sobject: DataPlan, objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
+  private async cleanJsonRecord(sobject: DataPlanSObject, objectLabel: string, records, recordIdsMap, lookups: Array<string>, userFieldsReference: Array<string>,) {
 
     let refId = 0;
     // If this object was already exported before, start the numbering after the last one already used
