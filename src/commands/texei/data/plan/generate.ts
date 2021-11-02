@@ -49,6 +49,7 @@ export default class Generate extends SfdxCommand {
           label: "",
           filters: "",
           orderBy: "",
+          externalId: "",
           excludedFields: []
       });
     }

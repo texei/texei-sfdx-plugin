@@ -14,6 +14,7 @@ Messages.importMessagesDirectory(__dirname);
 const messages = Messages.loadMessages("texei-sfdx-plugin", "data-import");
 
 let conn: Connection;
+let objectList:Array<DataPlanSObject>;
 let recordIdsMap: Map<string, string>;
 
 interface ErrorResultDetail {
@@ -40,6 +41,11 @@ export default class Import extends SfdxCommand {
     allornone: flags.boolean({
       char: "a",
       description: messages.getMessage("allOrNoneFlagDescription"),
+      required: false
+    }),
+    dataplan: flags.string({
+      char: 'p',
+      description: messages.getMessage('dataPlanFlagDescription'),
       required: false
     })
   };
@@ -73,9 +79,21 @@ export default class Import extends SfdxCommand {
     }).sort(function(a, b) {
       return a.substr(0, a.indexOf('-'))-b.substr(0, b.indexOf('-'))
     });
+
+    if (this.flags.dataplan) {
+      // Read objects list from file
+      const readFile = util.promisify(fs.readFile);
+      const dataPlan: DataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
+      objectList = dataPlan.sObjects;
+      if (dataFiles.length != objectList.length) {
+        throw new SfdxError(`Object count in data-plan.json and import file count do not match!`);
+      }
+    }
     
     // Read and import data
-    for (const dataFile of dataFiles) {
+    for (let i = 0; i < dataFiles.length; i++) {
+      const dataFile = dataFiles[i];
+      const externalIdField = objectList?.[i]?.externalId;
 
       // If file doesn't start with a number, just don't parse it (could be data-plan.json)
       if (!isNaN(dataFile.substring(0,1))) {
@@ -86,7 +104,7 @@ export default class Import extends SfdxCommand {
         const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
 
         await this.prepareDataForInsert(objectName, objectRecords);
-        await this.upsertData(objectRecords, objectName);
+        await this.upsertData(objectRecords, objectName, externalIdField);
 
         this.ux.stopSpinner(`Done.`);
       }
@@ -136,12 +154,22 @@ export default class Import extends SfdxCommand {
     }
   }
 
-  private async upsertData(records: Array<any>, sobjectName: string) {
+  private async upsertData(records: Array<any>, sobjectName: string, externalIdField: string) {
     
     let sobjectsResult:Array<RecordResult> = new Array<RecordResult>();
 
-    // So far, a whole file will be either inserted or updated
-    if (records[0] && records[0].Id) {
+    // So far, a whole file will be either upserted, inserted or updated
+    if (externalIdField) {
+      // external id field is specified in data-plan.json --> upsert
+      this.debug(`DEBUG upserting ${sobjectName} records using external id field '${externalIdField}'`);
+
+      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+      sobjectsResult = await conn.sobject(sobjectName).upsert(records, externalIdField, { allowRecursive: true, allOrNone: this.flags.allornone })
+                                                      .catch(err => {
+                                                        throw new SfdxError(`Error upserting records: ${err}`);
+                                                      });
+    }
+    else if (records[0] && records[0].Id) {
       // There is an Id, so it's an update
       this.debug(`DEBUG updating ${sobjectName} records`);
 

@@ -8,5 +8,6 @@ interface DataPlanSObject {
     label: string;
     filters: string;
     orderBy: string;
+    externalId: string;
     excludedFields: Array<string>;
 }
