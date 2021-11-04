@@ -48,7 +48,8 @@ export default class Generate extends SfdxCommand {
             "name": objectName,
             "label": "",
             "filters": "",
-            "excludedFields": []
+            "excludedFields": [],
+            "exportOwner": false
         });
     }
 

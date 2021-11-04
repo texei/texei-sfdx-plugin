@@ -100,6 +100,9 @@ export default class Import extends SfdxCommand {
     const lookups: Array<string> = await this.getLookupsForObject(sobjectName);
     let recTypeInfos = new Map<string, string>();
 
+    // Get list of valid user ids in the org
+    const userSet = await this.getValidUserAndQueueList();
+
     // Get Record Types information with newly generated Ids
     recTypeInfos = await this.getRecordTypeMap(sobjectName);
 
@@ -117,6 +120,11 @@ export default class Import extends SfdxCommand {
         if (sobject[lookup] && !(sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook' && lookup === 'Pricebook2Id')) {
           sobject[lookup] = recordIdsMap.get(sobject[lookup]);
         }   
+      }
+
+      // Remove OwnerId if the user is not found and active in the org
+      if (!userSet.has(sobject.OwnerId)) {
+        delete sobject.OwnerId;
       }
 
       // Replace Record Types, if any
@@ -261,5 +269,23 @@ export default class Import extends SfdxCommand {
     }
 
     return lookups;
+  }
+
+  private async getValidUserAndQueueList() {
+    let userQueueSet = new Set();
+
+    const conn = this.org.getConnection();
+    const userResults = (await conn.query('SELECT Id FROM User WHERE IsActive = TRUE')).records as any;
+
+    for (const user of userResults) {
+      userQueueSet.add(user.Id);
+    }
+
+    const queueResults = (await conn.query("SELECT Id FROM Group WHERE Type = 'Queue'")).records as any;
+
+    for (const queue of queueResults) {
+      userQueueSet.add(queue.Id);
+    }
+    return userQueueSet;
   }
 }
