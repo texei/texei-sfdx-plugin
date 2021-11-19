@@ -12,3 +12,4 @@ node_modules
 .DS_Store
 .nyc_output
 project-scratch-def.json
+hardis-report/
