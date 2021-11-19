@@ -19,6 +19,7 @@ let recordIdsMap: Map<string, string>;
 let lookupOverrideMap: Map<string, Set<string>>;
 let queriedLookupOverrideRecords: Map<string, Record[]>;
 let remainingDataFiles: Set<string>;
+let isVerbose: boolean = false;
 
 interface ErrorResultDetail {
   statusCode: string;
@@ -45,6 +46,9 @@ export default class Import extends SfdxCommand {
       char: "a",
       description: messages.getMessage("allOrNoneFlagDescription"),
       required: false
+    }),
+    verbose: flags.builtin({
+      description: messages.getMessage('verbose'),
     })
   };
 
@@ -60,6 +64,7 @@ export default class Import extends SfdxCommand {
   public async run(): Promise<AnyJson> {
     conn = await this.org.getConnection();
     recordIdsMap = new Map<string, string>();
+    isVerbose = this.flags.verbose;
 
     // Just add potential SfdxOrgUser that could be used during export
     const scratchOrgUserId: any = ((await conn.query(
@@ -151,6 +156,10 @@ export default class Import extends SfdxCommand {
             // If the first override we find, parse all files to get all needed fields
             // Do it only know so that the command won't be slower if there is no override used
             lookupOverrideMap = await this.createLookupOverrideMap();
+
+            if (lookupOverrideMap === undefined) {
+              throw new SfdxError(`A lookupOverride is specified in your data plan for sObject ${lookup.referenceTo}, but no field is associated to it. Either remove the lookupOverride for this sObject or add field(s).`);
+            }
             queriedLookupOverrideRecords = new Map<string, Record[]>();
           }
           
@@ -171,14 +180,15 @@ export default class Import extends SfdxCommand {
           delete filterList.attributes;
 
           const start = Date.now();
-          console.log(`Searching for record for lookup override`);
+          this.debug(`Searching for record for lookup override`);
 
           const foundRecord = sObjectRecords.find(element => {            
             for (const [key, value] of Object.entries(filterList)) {
               this.debug(`Looking for value ${value} for field ${key}`);
               this.debug(`Value for current record: ${element[key]}`);
 
-              if (element[key] !== value) {
+              // Can't use !== because numbers and string values having only numbers in them are returned the same way by the bulk API
+              if (element[key] != value) {
                 return;
               }
             }
@@ -186,9 +196,7 @@ export default class Import extends SfdxCommand {
             return element;
           });
           const duration = Date.now() - start;
-          console.log(`Finished searching record in ${duration} milliseconds`);
-          
-          //console.log(`foundRecord: ${JSON.stringify(foundRecord)}`);
+          this.debug(`Finished searching record in ${duration} milliseconds`);
 
           // TODO: better output than Object.entries(filterList)
           // Instead of looping for every record, create a map first from all needed values (so only one loop)
@@ -197,7 +205,9 @@ export default class Import extends SfdxCommand {
           }
           
           const queriedRecordId = foundRecord.Id;
-          console.log(`RecordId found (${queriedRecordId}) for sObject ${sObjectName} and filter ${Object.entries(filterList)}`);
+          if (isVerbose) {
+            this.ux.log(`RecordId found (${queriedRecordId}) for sObject ${sObjectName} and filter ${Object.entries(filterList)}`);
+          }
 
           // Replace relationship name with field name + found Id
           delete sobject[lookup.relationshipName];
@@ -403,7 +413,7 @@ export default class Import extends SfdxCommand {
       fieldsToQuery.add('Id');
 
       conn.bulk.pollTimeout = 250000;
-      this.ux.log(`Querying ${sObjectName} for lookup override`);
+      this.debug(`Querying ${sObjectName} for lookup override`);
 
       // Manually reading stream instead on using jsforce directly
       // Because jsforce will return '75008.0' instead of 75008 for a number

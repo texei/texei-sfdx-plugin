@@ -24,6 +24,7 @@ let conn:Connection;
 let objectList:Array<DataPlan>;
 let lastReferenceIds: Map<string, number> = new Map<string, number>();
 let globallyExcludedFields: Array<string>;
+let globallyOverridenLookup: Map<string, string>;
 
 export default class Export extends SfdxCommand {
 
@@ -75,6 +76,14 @@ export default class Export extends SfdxCommand {
       if (dataPlan.excludedFields) {
         globallyExcludedFields = dataPlan.excludedFields;
       }
+      // If there are some global lookup override, add them
+      if (dataPlan.lookupOverride) {
+        globallyOverridenLookup = new Map<string, string>();
+
+        for (const [key, value] of Object.entries(dataPlan.lookupOverride)) {
+          globallyOverridenLookup.set(key, value as string);
+        }
+      }
     }
     else {
       throw new SfdxError(`Either objects or dataplan flag is mandatory`);
@@ -124,7 +133,7 @@ export default class Export extends SfdxCommand {
 
       if (field.createable && !fieldsToExclude.includes(field.name)) {
         
-        // If it's a lookup field and it's overridden, use the override 
+        // If it's a lookup field and it's overridden at the field level, use the override 
         if (sobject.lookupOverride
             && sobject.lookupOverride[field.name]) {
           
@@ -141,19 +150,33 @@ export default class Export extends SfdxCommand {
           }
         }
         else {
-          fields.push(field.name);
-
           // If it's a lookup, also add it to the lookup list, to be replaced later
           // Excluding OwnerId as we are not importing users anyway
           if (field.referenceTo && field.referenceTo.length > 0 && field.name != 'OwnerId' && field.name != 'RecordTypeId') {
 
-            // If User is queried, use the reference, otherwise use the Scratch Org User
-            if (!objectList.find(x => x.name === 'User') && field.referenceTo.includes('User')) {
-              userFieldsReference.push(field.name);
+            if (globallyOverridenLookup?.get(field.referenceTo[0])) {
+              this.debug(`FOUND ${field.name}: ${globallyOverridenLookup.get(field.referenceTo[0])}`);
+
+              // If it's a lookup field and it's overridden at the field level, use the override
+              overriddenLookups.push(field.relationshipName);
+              globallyOverridenLookup.get(field.referenceTo[0])?.split(',')?.forEach(relationshipField => {
+                relationshipFields.push(`${field.relationshipName}.${relationshipField}`);
+              });
             }
             else {
-              lookups.push(field.name);
+              fields.push(field.name);
+
+              // If User is queried, use the reference, otherwise use the Scratch Org User
+              if (!objectList.find(x => x.name === 'User') && field.referenceTo.includes('User')) {
+                userFieldsReference.push(field.name);
+              }
+              else {
+                lookups.push(field.name);
+              }
             }
+          }
+          else {
+            fields.push(field.name);
           }
         }
       }
@@ -243,6 +266,10 @@ export default class Export extends SfdxCommand {
           // If lookup isn't empty, remove useless information
           // Keeping "type" so we don't have to do a describe to know what is the related sObject at import
           delete record[lookup].attributes.url;
+        }
+        else {
+          // Remove empty lookup relationship field
+          delete record[lookup];
         }
       }
 

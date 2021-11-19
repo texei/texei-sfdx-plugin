@@ -38,7 +38,8 @@ export default class Generate extends SfdxCommand {
   public async run(): Promise<AnyJson> {
 
     let dataPlan = { 
-      "excludedFields": [], 
+      "excludedFields": [],
+      "lookupOverride": {},
       "sObjects": [] 
     };
 
@@ -48,7 +49,6 @@ export default class Generate extends SfdxCommand {
             "name": objectName,
             "label": "",
             "filters": "",
-            "lookupOverride": {},
             "excludedFields": []
         });
     }
