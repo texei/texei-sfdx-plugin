@@ -11,6 +11,7 @@ interface DataPlan {
   label: string;
   filters: string;
   excludedFields: Array<string>;
+  exportOwner: boolean;
 }
 
 // Initialize Messages with the current plugin directory
@@ -122,10 +123,9 @@ export default class Export extends SfdxCommand {
       if (field.createable && !fieldsToExclude.includes(field.name)) {
         
         fields.push(field.name);
-        // If it's a lookup, also add it to the lookup list, to be replaced later
-        // Excluding OwnerId as we are not importing users anyway
-        if (field.referenceTo && field.referenceTo.length > 0 && field.name != 'OwnerId' && field.name != 'RecordTypeId') {
 
+        // If it's a lookup, also add it to the lookup list, to be replaced later
+        if (field.referenceTo && field.referenceTo.length > 0 && field.name != 'RecordTypeId' && field.name != 'OwnerId') {
           // If User is queried, use the reference, otherwise use the Scratch Org User
           if (!objectList.find(x => x.name === 'User') && field.referenceTo.includes('User')) {
             userFieldsReference.push(field.name);
@@ -228,7 +228,11 @@ export default class Export extends SfdxCommand {
       // Delete unused fields
       delete record.Id;
       delete record.RecordType;
-      delete record.OwnerId;
+
+      // Remove Owner Id if we haven't explicitely requested it in the plan
+      if (!sobject.exportOwner) {
+        delete record.OwnerId;
+      }
 
       if (sobject.name === 'Pricebook2') {
         delete record.IsStandard;
