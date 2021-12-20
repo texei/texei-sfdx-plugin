@@ -2,6 +2,7 @@ import { SfdxCommand, flags } from '@salesforce/command';
 import { Messages, SfdxError } from '@salesforce/core';
 import * as fs from 'fs';
 import * as path from 'path';
+import { toTitleCase } from "../../../../shared/utils";
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -38,7 +39,7 @@ export default class Extract extends SfdxCommand {
 
   protected static flagsConfig = {
     outputdir: flags.string({ char: 'd', description: messages.getMessage('directoryFlagDescription'), default: 'config' }),
-    scope: flags.string({ char: 's', description: messages.getMessage('scopeFlagDescription'), options: ['basic', 'full'], default: 'basic' })
+    scope: flags.string({ char: 's', description: messages.getMessage('scopeFlagDescription'), options: ['basic', 'full', 'shaperepresentation'], default: 'basic' })
   };
 
   // Comment this out if your command does not require an org username
@@ -79,136 +80,170 @@ export default class Extract extends SfdxCommand {
       apiVersion = await this.org.retrieveMaxApiVersion();
     }
 
-    // Querying Settings
-    const settingPromises = [];
-    var types = [{type: 'Settings', folder: null}];
-    await conn.metadata.list(types, apiVersion, function(err, metadata) {
-      if (err) { return console.error('err', err); }
-
-        for (let meta of metadata) {
-          const settingType = meta.fullName+meta.type;
-
-          // Querying settings details - Is there a way to do only 1 query with jsforce ?
-          const settingPromise = conn.metadata.read(settingType, settingType);
-          settingPromises.push(settingPromise);
+    if (this.flags.scope === 'shaperepresentation') {
+      const shapeQuery = `Select Edition, Features, Settings from ShapeRepresentation where Status = 'Active'`;
+      try {
+        const shapeRepresentation = (await conn.query(shapeQuery) as any).records[0];
+        
+        // Construct the object with all values
+        definitionValues.orgName = orgInfos.records[0].Name;
+        if (shapeRepresentation.Edition) {
+          definitionValues.edition = await toTitleCase(shapeRepresentation.Edition);
         }
-    });
+        definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
+        if (shapeRepresentation.Features) {
+          // Today this doesn't work because:
+          // - Some values can't be set manually, ex: 250 Custom Apps whereas max allowed in scratch def file is 30
+          // - Case isn't correct (even though this doesn't seem to prevent creation)
+          definitionValues.features = shapeRepresentation.Features.split(';');
+        }
+        if (shapeRepresentation.Settings) {
+          // Still some bugs/issues:
+          // - "OrdersEnabled must be specified in the metadata" (enableOrders)
+          // - Some Prod/DevHub specific values to remove: "enableScratchOrgManagementPref"
 
-    // Waiting for all promises to resolve
-    await Promise.all(settingPromises).then((settingValues) => {
-      // TODO: Write these in the file. - Is everything part of the scratch definition file ? For instance Business Hours ?
-      // Upper camel case --> lower camel case ; ex: OmniChannelSettings --> omniChannelSettings
+          // Removing unwanted settings
+          let shapeSettings = JSON.parse(shapeRepresentation.Settings);
+          delete shapeSettings.devHubSettings;
+          definitionValues.settings = shapeSettings;
+        }
+      }
+      catch(ex) {
+        throw new SfdxError('Unable to query ShapeRepresentation, be sure to target an org with Org Shape enabled and a shape created.');
+      }
+    }
+    else {
+      // Querying Settings
+      const settingPromises = [];
+      var types = [{type: 'Settings', folder: null}];
+      await conn.metadata.list(types, apiVersion, function(err, metadata) {
+        if (err) { return console.error('err', err); }
 
-      for (const setting of settingValues) {
-        // TODO: manage dependencies on features
+          for (let meta of metadata) {
+            const settingType = meta.fullName+meta.type;
 
-        // For whatever reason, this setting has not the same format as others
-        if (setting.fullName == 'OrgPreferenceSettings') {
-
-          const settingsName = this.toLowerCamelCase(setting.fullName);
-          let settingValues: any = {};
-          for (const subsetting of setting.preferences) {
-
-            if (!settingValuesToIgnore.includes(subsetting.settingName)) {
-              const settingName = this.toLowerCamelCase(subsetting.settingName);
-              settingValues[settingName] = subsetting.settingValue;
-
-              // Checking if there is a feature dependency
-              if (featureDependencies.has(settingName)) {
-                featureList.push(featureDependencies.get(settingName));
-              }
-            }
+            // Querying settings details - Is there a way to do only 1 query with jsforce ?
+            const settingPromise = conn.metadata.read(settingType, settingType);
+            settingPromises.push(settingPromise);
           }
+      });
 
-          definitionValuesTemp.settings[settingsName] = settingValues;
-        }
+      // Waiting for all promises to resolve
+      await Promise.all(settingPromises).then((settingValues) => {
+        // TODO: Write these in the file. - Is everything part of the scratch definition file ? For instance Business Hours ?
+        // Upper camel case --> lower camel case ; ex: OmniChannelSettings --> omniChannelSettings
 
-        // FIXME: Lots of settings have errors (for instance linked to metadata)
-        // TODO: Add to org-shape-command.md
-        // ForecastingSettings
-        // Error  shape/settings/Forecasting.settings  Forecasting  Cannot resolve Forecasting Type from name or attributes
+        for (const setting of settingValues) {
+          // TODO: manage dependencies on features
 
-        // searchSettings (Includes custom objects not there yet)
-        // Error  shape/settings/Search.settings  Search  Entity is null or entity element's name is null
+          // For whatever reason, this setting has not the same format as others
+          if (setting.fullName == 'OrgPreferenceSettings') {
 
-        // Territory2Settings
-        // Error  shape/settings/Territory2.settings   Territory2   Not available for deploy for this organization
+            const settingsName = this.toLowerCamelCase(setting.fullName);
+            let settingValues: any = {};
+            for (const subsetting of setting.preferences) {
 
-        // Error  shape/settings/Account.settings        Account        You cannot set a value for enableAccountOwnerReport unless your organization-wide sharing access level for Accounts is set to Private.
-        
-        // Error  shape/settings/Case.settings           Case           CaseSettings: There are no record types defined for Case.
-        // Error  shape/settings/Case.settings  Case  CaseSettings: Specify the default case user.
-        // Error  shape/settings/Case.settings  Case  In field: caseOwner - no Queue named myQueue found
-        // Error  shape/settings/Case.settings  Case  WebToCaseSettings: Invalid caseOrigin Formulaire
-        
-        // Error  shape/settings/OrgPreference.settings  OrgPreference  You do not have sufficient rights to access the organization setting: PortalUserShareOnCase
-        
-        // TODO: Test all settings and add them to org-shape-command.md if it doesn't work
-        const settingsToTest = ['AccountSettings',
-                                'ActivitiesSettings',
-                                'AddressSettings',
-                                'BusinessHoursSettings',
-                                'CaseSettings',
-                                'CommunitiesSettings',
-                                'CompanySettings',
-                                'ContractSettings',
-                                'EntitlementSettings',
-                                'FileUploadAndDownloadSecuritySettings',
-                                'IdeasSettings',
-                                'MacroSettings',
-                                'MobileSettings',
-                                'NameSettings',
-                                'OmniChannelSettings',
-                                'OpportunitySettings',
-                                'OrderSettings',
-                                'PathAssistantSettings',
-                                'ProductSettings',
-                                'QuoteSettings',
-                                'SecuritySettings',
-                                'SocialCustomerServiceSettings'];
+              if (!settingValuesToIgnore.includes(subsetting.settingName)) {
+                const settingName = this.toLowerCamelCase(subsetting.settingName);
+                settingValues[settingName] = subsetting.settingValue;
 
-        if (setting.fullName !== undefined && (settingsToTest.includes(setting.fullName) || this.flags.scope === 'full')) {
-
-          const settingName = this.toLowerCamelCase(setting.fullName);
-          if (!settingValuesToIgnore.includes(settingName)) {
-            const formattedSetting = this.formatSetting(setting);
-
-            // All this code to ignore values should be refactored in a better way, todo
-            for (const property in setting) {
-              
-              // Checking if there is a feature dependency
-              if (featureDependencies.has(property)) {
-                featureList.push(featureDependencies.get(property));
-              }
-
-              if (setting.hasOwnProperty(property) && settingValuesToIgnore.includes(property)) {
-                delete setting[property];
-              }
-              
-              // TODO: Handle recursivity correctly
-              for (const prop in setting[property]) {
-                if (setting.hasOwnProperty(property) && setting[property].hasOwnProperty(prop) && settingValuesToIgnore.includes(prop)) {
-                  delete setting[property][prop];
+                // Checking if there is a feature dependency
+                if (featureDependencies.has(settingName)) {
+                  featureList.push(featureDependencies.get(settingName));
                 }
               }
             }
 
-            definitionValuesTemp.settings[settingName] = formattedSetting;
+            definitionValuesTemp.settings[settingsName] = settingValues;
+          }
+
+          // FIXME: Lots of settings have errors (for instance linked to metadata)
+          // TODO: Add to org-shape-command.md
+          // ForecastingSettings
+          // Error  shape/settings/Forecasting.settings  Forecasting  Cannot resolve Forecasting Type from name or attributes
+
+          // searchSettings (Includes custom objects not there yet)
+          // Error  shape/settings/Search.settings  Search  Entity is null or entity element's name is null
+
+          // Territory2Settings
+          // Error  shape/settings/Territory2.settings   Territory2   Not available for deploy for this organization
+
+          // Error  shape/settings/Account.settings        Account        You cannot set a value for enableAccountOwnerReport unless your organization-wide sharing access level for Accounts is set to Private.
+          
+          // Error  shape/settings/Case.settings           Case           CaseSettings: There are no record types defined for Case.
+          // Error  shape/settings/Case.settings  Case  CaseSettings: Specify the default case user.
+          // Error  shape/settings/Case.settings  Case  In field: caseOwner - no Queue named myQueue found
+          // Error  shape/settings/Case.settings  Case  WebToCaseSettings: Invalid caseOrigin Formulaire
+          
+          // Error  shape/settings/OrgPreference.settings  OrgPreference  You do not have sufficient rights to access the organization setting: PortalUserShareOnCase
+          
+          // TODO: Test all settings and add them to org-shape-command.md if it doesn't work
+          const settingsToTest = ['AccountSettings',
+                                  'ActivitiesSettings',
+                                  'AddressSettings',
+                                  'BusinessHoursSettings',
+                                  'CaseSettings',
+                                  'CommunitiesSettings',
+                                  'CompanySettings',
+                                  'ContractSettings',
+                                  'EntitlementSettings',
+                                  'FileUploadAndDownloadSecuritySettings',
+                                  'IdeasSettings',
+                                  'MacroSettings',
+                                  'MobileSettings',
+                                  'NameSettings',
+                                  'OmniChannelSettings',
+                                  'OpportunitySettings',
+                                  'OrderSettings',
+                                  'PathAssistantSettings',
+                                  'ProductSettings',
+                                  'QuoteSettings',
+                                  'SecuritySettings',
+                                  'SocialCustomerServiceSettings'];
+
+          if (setting.fullName !== undefined && (settingsToTest.includes(setting.fullName) || this.flags.scope === 'full')) {
+
+            const settingName = this.toLowerCamelCase(setting.fullName);
+            if (!settingValuesToIgnore.includes(settingName)) {
+              const formattedSetting = this.formatSetting(setting);
+
+              // All this code to ignore values should be refactored in a better way, todo
+              for (const property in setting) {
+                
+                // Checking if there is a feature dependency
+                if (featureDependencies.has(property)) {
+                  featureList.push(featureDependencies.get(property));
+                }
+
+                if (setting.hasOwnProperty(property) && settingValuesToIgnore.includes(property)) {
+                  delete setting[property];
+                }
+                
+                // TODO: Handle recursivity correctly
+                for (const prop in setting[property]) {
+                  if (setting.hasOwnProperty(property) && setting[property].hasOwnProperty(prop) && settingValuesToIgnore.includes(prop)) {
+                    delete setting[property][prop];
+                  }
+                }
+              }
+
+              definitionValuesTemp.settings[settingName] = formattedSetting;
+            }
           }
         }
-      }
 
-      // Construct the object with all values
-      definitionValues.orgName = orgInfos.records[0].Name;
-      definitionValues.edition = this.mapOrganizationTypeToScratchOrgEdition(orgInfos.records[0].OrganizationType);
-      definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
+        // Construct the object with all values
+        definitionValues.orgName = orgInfos.records[0].Name;
+        definitionValues.edition = this.mapOrganizationTypeToScratchOrgEdition(orgInfos.records[0].OrganizationType);
+        definitionValues.language = orgInfos.records[0].LanguageLocaleKey;
 
-      // Adding features if needed
-      if (featureList.length > 0) {
-        definitionValues.features = featureList;
-      }
-      definitionValues.settings = definitionValuesTemp.settings;
-    });
+        // Adding features if needed
+        if (featureList.length > 0) {
+          definitionValues.features = featureList;
+        }
+        definitionValues.settings = definitionValuesTemp.settings;
+      });
+    }
 
     // If a path was specified, add it
     let filePath = definitionFileName;
@@ -227,7 +262,7 @@ export default class Extract extends SfdxCommand {
 
     await fs.writeFile(saveToPath, this.removeQuotes(JSON.stringify(definitionValues, null, 2)), 'utf8', function (err) {
       if (err) {
-          throw new SfdxError(`Unable to write definition file at path ${process.cwd()}: ${err}`);
+        throw new SfdxError(`Unable to write definition file at path ${process.cwd()}: ${err}`);
       }
     });
     

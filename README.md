@@ -216,7 +216,7 @@ OPTIONS
                                                                                     directory to store the extracted
                                                                                     definition file
 
-  -s, --scope=basic|full                                                            [default: basic] the scope of
+  -s, --scope=basic|full|shaperepresentation                                        [default: basic] the scope of
                                                                                     settings to convert to the scratch
                                                                                     definition file
 
