@@ -1,13 +1,14 @@
-import { core, SfdxCommand, flags } from '@salesforce/command';
+import { SfdxCommand, flags } from '@salesforce/command';
+import { Messages, SfdxError } from '@salesforce/core';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // Initialize Messages with the current plugin directory
-core.Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'org-shape-extract');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'org-shape-extract');
 
 const definitionFileName  = 'project-scratch-def.json';
 // TODO: Add bypassed values in the correct array, and after investigation either fix or update org-shape-extract.md doc
@@ -226,7 +227,7 @@ export default class Extract extends SfdxCommand {
 
     await fs.writeFile(saveToPath, this.removeQuotes(JSON.stringify(definitionValues, null, 2)), 'utf8', function (err) {
       if (err) {
-          throw new core.SfdxError(`Unable to write definition file at path ${process.cwd()}: ${err}`);
+          throw new SfdxError(`Unable to write definition file at path ${process.cwd()}: ${err}`);
       }
     });
     

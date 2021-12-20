@@ -68,8 +68,8 @@ OPTIONS
                                                                                     this command invocation
 
 EXAMPLE
-  sfdx texei:contractstatus:value:add --label 'My New Contract Status Label' --apiname 'My New Contract Status API Name' 
-  --targetusername texei
+  sfdx texei:contractstatus:value:add --label 'My New Contract Status Label' --apiname 'My New Contract Status API Name'
+   --targetusername texei
 ```
 
 _See code: [src/commands/texei/contractstatus/value/add.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.12.0/src/commands/texei/contractstatus/value/add.ts)_
@@ -142,7 +142,7 @@ OPTIONS
 
 EXAMPLE
   $ sfdx texei:data:import --inputdir ./data --targetusername texei-scratch
-     Data imported!
+    Data imported!
 ```
 
 _See code: [src/commands/texei/data/import.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.12.0/src/commands/texei/data/import.ts)_
@@ -312,9 +312,8 @@ USAGE
 OPTIONS
   -k, --keep=keep                                                                   comma-separated list of profile node
                                                                                     permissions that need to be kept.
-                                                                                    Default:
-                                                                                    layoutAssignments,loginHours,loginIp
-                                                                                    Ranges,custom,userLicense
+                                                                                    Default: layoutAssignments,loginHour
+                                                                                    s,loginIpRanges,custom,userLicense
 
   -p, --path=path                                                                   comma-separated list of profiles, or
                                                                                     path to profiles folder. Default:
@@ -398,8 +397,8 @@ resumed sharing calculation
 
 ```
 USAGE
-  $ sfdx texei:sharingcalc:resume [-s <string>] [-t <number>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
-  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+  $ sfdx texei:sharingcalc:resume [-s <string>] [-t <number>] [-u <string>] [--apiversion <string>] [--json] [--loglevel
+   trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
 
 OPTIONS
   -s, --scope=sharingRule|groupMembership                                           [default: sharingRule] scope of

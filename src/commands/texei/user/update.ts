@@ -1,12 +1,13 @@
-import { core, SfdxCommand, flags } from '@salesforce/command';
+import { SfdxCommand, flags } from '@salesforce/command';
+import { Messages, SfdxError } from '@salesforce/core';
 var exec = require('child-process-promise').exec;
 
 // Initialize Messages with the current plugin directory
-core.Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages('texei-sfdx-plugin', 'user-update');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'user-update');
 
 export default class Update extends SfdxCommand {
 
@@ -62,7 +63,7 @@ export default class Update extends SfdxCommand {
       result = result.replace(/(\r\n\t|\n|\r\t)/gm,'');
 
       // Throw an error, sfdx library will manage the way to display it
-      throw new core.SfdxError(result);
+      throw new SfdxError(result);
     }
 
     // Everything went fine, return an object that will be used for --json
