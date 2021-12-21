@@ -279,7 +279,7 @@ export default class Import extends SfdxCommand {
         const errors:ErrorResultDetail = res.errors[0] as any;
         // TODO: add a flag to allow this to be added to the logs
         if (externalIdField && errors.statusCode === 'METHOD_NOT_ALLOWED') {
-          throw new SfdxError(`Unable to upsert records. Be sure you're not importing records where ${externalIdField} External Id field is missing.`);
+          throw new SfdxError(`Unable to upsert records. Make sure you're not importing records where ${externalIdField} External Id field is missing.`);
         }
         else if (errors.statusCode !== 'ALL_OR_NONE_OPERATION_ROLLED_BACK') {
           throw new SfdxError(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields?.length > 0?'('+errors.fields+')':''}`);
