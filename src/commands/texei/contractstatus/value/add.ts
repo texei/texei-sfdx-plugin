@@ -1,12 +1,13 @@
-import { core, flags, SfdxCommand } from "@salesforce/command";
+import { flags, SfdxCommand } from "@salesforce/command";
+import { Messages } from '@salesforce/core';
 import { StandardValueSetHelper } from "../../../../shared/standardValueSetHelper";
 
 // Initialize Messages with the current plugin directory
-core.Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages(
+const messages = Messages.loadMessages(
   "texei-sfdx-plugin",
   "contractstatus-value-add"
 );
@@ -35,6 +36,8 @@ export default class Add extends SfdxCommand {
 
   public async run(): Promise<any> {
 
+    this.ux.warn('ContractStatus StandardValueSet is now supported, you should move to the Metadata API instead of using this command.');
+    
     this.ux.startSpinner(`Adding ContractStatus value (${this.flags.label}/${this.flags.apiname})`, null, { stdout: true });
 
     const svsh = new StandardValueSetHelper(this.org.getConnection(), 'ContractStatus');

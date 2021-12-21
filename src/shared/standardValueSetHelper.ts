@@ -1,4 +1,4 @@
-import { core } from "@salesforce/command";
+import { Connection } from '@salesforce/core';
 import * as puppeteer from "puppeteer";
 
 const standardValueSetPaths = new Map([
@@ -20,7 +20,7 @@ export class StandardValueSetHelper {
     page;
     navigationPromise;
 
-    constructor(connection: core.Connection, standardValueSetName: string) {
+    constructor(connection: Connection, standardValueSetName: string) {
         this._connection = connection;
         this._standardValueSetName = standardValueSetName;
     }
