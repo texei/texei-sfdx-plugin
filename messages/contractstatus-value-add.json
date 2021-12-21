@@ -1,5 +1,5 @@
 {
-  "commandDescription": "add a value to Contract Status picklist",
+  "commandDescription": "[DEPRECATED - Use Metadata API instead] add a value to Contract Status picklist",
   "labelFlagDescription": "label of the Contract Status value to add",
   "apiNameFlagDescription": "API Name of the Contract Status value to add",
   "statusCategoryFlagDescription": "Status Category of the Contract Status value to add"

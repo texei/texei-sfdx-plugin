@@ -39,7 +39,7 @@ Link the plugin: sfdx plugins:link .
 
 ## `sfdx texei:contractstatus:value:add -l <string> -a <string> [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
-add a value to Contract Status picklist
+[DEPRECATED - Use Metadata API instead] add a value to Contract Status picklist
 
 ```
 USAGE
