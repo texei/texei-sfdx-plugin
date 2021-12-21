@@ -109,7 +109,7 @@ export default class Extract extends SfdxCommand {
         }
       }
       catch(ex) {
-        throw new SfdxError('Unable to query ShapeRepresentation, be sure to target an org with Org Shape enabled and a shape created.');
+        throw new SfdxError('Unable to query ShapeRepresentation, make sure to target an org with Org Shape enabled and a shape created.');
       }
     }
     else {
