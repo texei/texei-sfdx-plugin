@@ -82,12 +82,13 @@ export default class Import extends SfdxCommand {
     }).sort(function(a, b) {
       return a.substr(0, a.indexOf('-'))-b.substr(0, b.indexOf('-'))
     });
-    
+
     // Used later to parse remaining files if a lookup override is found
     remainingDataFiles = new Set(dataFiles);
 
     // Read and import data
-    for (const dataFile of dataFiles) {
+    for (let i = 0; i < dataFiles.length; i++) {
+      const dataFile = dataFiles[i];
 
       // If file doesn't start with a number, just don't parse it (could be data-plan.json)
       if (!isNaN(dataFile.substring(0,1))) {
@@ -95,7 +96,9 @@ export default class Import extends SfdxCommand {
 
         this.ux.startSpinner(`Importing ${dataFile}`, null, { stdout: true });
 
-        const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
+        const objectData:any = (await this.readFile(dataFile));
+        const externalIdField = objectData?.attributes?.externalId;
+        const objectRecords:Array<Record> = objectData.records;
 
         // TODO: If there is a lookupOverride, query all records from sObject
         // Parse file 1st record if there are lookup override
@@ -109,7 +112,7 @@ export default class Import extends SfdxCommand {
         // Also keep a number of files using the sObject, so that once it's not useful anymore we can clean the memory from list not useful anymore
         // conn.bulk.query("SELECT Id, Name, NumberOfEmployees FROM Account")
         await this.prepareDataForInsert(objectName, objectRecords);
-        await this.upsertData(objectRecords, objectName);
+        await this.upsertData(objectRecords, objectName, externalIdField);
 
         this.ux.stopSpinner(`Done.`);
       }
@@ -232,12 +235,22 @@ export default class Import extends SfdxCommand {
     }
   }
 
-  private async upsertData(records: Array<any>, sobjectName: string) {
+  private async upsertData(records: Array<any>, sobjectName: string, externalIdField: string) {
     
     let sobjectsResult:Array<RecordResult> = new Array<RecordResult>();
 
-    // So far, a whole file will be either inserted or updated
-    if (records[0] && records[0].Id) {
+    // So far, a whole file will be either upserted, inserted or updated
+    if (externalIdField) {
+      // external id field is specified --> upsert
+      this.debug(`DEBUG upserting ${sobjectName} records using external id field '${externalIdField}'`);
+
+      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+      sobjectsResult = await conn.sobject(sobjectName).upsert(records, externalIdField, { allowRecursive: true, allOrNone: this.flags.allornone })
+                                                      .catch(err => {
+                                                        throw new SfdxError(`Error upserting records: ${err}`);
+                                                      });
+    }
+    else if (records[0] && records[0].Id) {
       // There is an Id, so it's an update
       this.debug(`DEBUG updating ${sobjectName} records`);
 
@@ -266,7 +279,7 @@ export default class Import extends SfdxCommand {
         const errors:ErrorResultDetail = res.errors[0] as any;
         // TODO: add a flag to allow this to be added to the logs
         if (errors.statusCode !== 'ALL_OR_NONE_OPERATION_ROLLED_BACK') {
-          this.ux.error(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields.length > 0?'('+errors.fields+')':''}`);
+          throw new SfdxError(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields?.length > 0?'('+errors.fields+')':''}`);
         }
       }
     }

@@ -37,20 +37,22 @@ export default class Generate extends SfdxCommand {
 
   public async run(): Promise<AnyJson> {
 
-    let dataPlan = { 
-      "excludedFields": [],
-      "lookupOverride": {},
-      "sObjects": [] 
+    let dataPlan: DataPlan = {
+      excludedFields: [],
+      lookupOverride: {},
+      sObjects: []
     };
 
     // Read objects list from flag, mapping to data plan format
     for (const objectName of this.flags.objects.split(',')) {
-        dataPlan.sObjects.push({
-            "name": objectName,
-            "label": "",
-            "filters": "",
-            "excludedFields": []
-        });
+      dataPlan.sObjects.push({
+          name: objectName,
+          label: "",
+          filters: "",
+          orderBy: "",
+          externalId: "",
+          excludedFields: []
+      });
     }
 
     // Save file
