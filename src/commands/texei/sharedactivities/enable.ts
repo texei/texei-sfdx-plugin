@@ -33,6 +33,8 @@ export default class Enable extends SfdxCommand {
   public async run(): Promise<any> {
     let result = {};
 
+    this.ux.warn('SharedActivities are now officially supported, you should add the SharedActivities feature to your scratch definition file instead of using this command.');
+
     await this.enableSharedActivities();
 
     return result;
