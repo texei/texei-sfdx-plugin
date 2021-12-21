@@ -34,7 +34,7 @@ export default class Extract extends SfdxCommand {
   public static description = messages.getMessage('commandDescription');
 
   public static examples = [
-    `$ sfdx texei:org:shape:extract -u bulma@capsulecorp.com"`
+    `$ sfdx texei:org:shape:extract -u bulma@capsulecorp.com`
   ];
 
   protected static flagsConfig = {

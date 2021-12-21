@@ -232,7 +232,7 @@ OPTIONS
                                                                                     this command invocation
 
 EXAMPLE
-  $ sfdx texei:org:shape:extract -u bulma@capsulecorp.com"
+  $ sfdx texei:org:shape:extract -u bulma@capsulecorp.com
 ```
 
 _See code: [src/commands/texei/org/shape/extract.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.12.0/src/commands/texei/org/shape/extract.ts)_
