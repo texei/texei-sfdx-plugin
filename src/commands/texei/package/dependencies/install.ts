@@ -255,7 +255,7 @@ export default class Install extends SfdxCommand {
       const vers = version.split('.');
       let query = 'Select SubscriberPackageVersionId, IsPasswordProtected, IsReleased, Package2.NamespacePrefix ';
       query += 'from Package2Version ';
-      query += `where Package2Id='${packageName}' and MajorVersion=${vers[0]} and MinorVersion=${vers[1]} and PatchVersion=${vers[2]} `;
+      query += `where Package2Id='${packageName}' and MajorVersion=${vers[0]} and MinorVersion=${vers[1]} and PatchVersion=${vers[2]} and IsDeprecated = false `;
 
       if (namespaces != null) {
         query += ` and Package2.NamespacePrefix IN ('${namespaces.join('\',\'')}')`;
