@@ -244,11 +244,19 @@ export default class Import extends SfdxCommand {
       // external id field is specified --> upsert
       this.debug(`DEBUG upserting ${sobjectName} records using external id field '${externalIdField}'`);
 
-      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-      sobjectsResult = await conn.sobject(sobjectName).upsert(records, externalIdField, { allowRecursive: true, allOrNone: this.flags.allornone })
-                                                      .catch(err => {
-                                                        throw new SfdxError(`Error upserting records: ${err}`);
-                                                      });
+      // max. parallel upsert requests as supported by jsforce (default)
+      // https://github.com/jsforce/jsforce/blob/82fcc5284215e95047d0f735dd3037a1aeba5d88/lib/connection.js#L82
+      const maxParallelUpsertRequests = 10;
+
+      for (var i = 0; i < records.length; i += maxParallelUpsertRequests) {
+        // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+        const chunkResults: RecordResult[] = await conn.sobject(sobjectName)
+          .upsert(records.slice(i, i + maxParallelUpsertRequests), externalIdField, { allowRecursive: true, allOrNone: this.flags.allornone })
+          .catch((err) => {
+            throw new SfdxError(`Error upserting records: ${err}`);
+          });
+        sobjectsResult.push(...chunkResults);
+      }
     }
     else if (records[0] && records[0].Id) {
       // There is an Id, so it's an update
