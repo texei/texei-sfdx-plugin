@@ -158,7 +158,7 @@ export default class Install extends SfdxCommand {
 
           const key = installationKeys[keyIndex].trim();
           if (key.startsWith(`${keyIndex + 1}:`)) {
-            installationKeys[keyIndex] = key.substring(2);
+            installationKeys[keyIndex] = key.substring(keyIndex.toString().length + 1);
           } else {
             // Format is not correct, throw an error
             throw new SfdxError('Installation Key should have this format: 1:MyPackage1Key 2: 3:MyPackage3Key');
