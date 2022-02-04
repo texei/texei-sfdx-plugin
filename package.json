@@ -1,7 +1,7 @@
 {
   "name": "texei-sfdx-plugin",
   "description": "Texeï's plugin for sfdx",
-  "version": "1.14.3",
+  "version": "1.14.4",
   "author": "Texeï",
   "bugs": "https://github.com/https://github.com/texei/texei-sfdx-plugin/issues",
   "dependencies": {

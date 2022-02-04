@@ -47,6 +47,11 @@ export default class Import extends SfdxCommand {
       description: messages.getMessage("allOrNoneFlagDescription"),
       required: false
     }),
+    ignoreerrors: flags.boolean({
+      char: "o",
+      description: messages.getMessage("ignoreErrorsFlagDescription"),
+      required: false
+    }),
     verbose: flags.builtin({
       description: messages.getMessage('verbose'),
     })
@@ -204,7 +209,12 @@ export default class Import extends SfdxCommand {
           // TODO: better output than Object.entries(filterList)
           // Instead of looping for every record, create a map first from all needed values (so only one loop)
           if (foundRecord === undefined) {
-            throw new SfdxError(`No ${lookup.referenceTo} record found for filter ${Object.entries(filterList)}`);
+            if (this.flags.ignoreerrors) {
+              this.ux.log(`No ${lookup.referenceTo} record found for filter ${Object.entries(filterList)}`);
+            }
+            else {
+              throw new SfdxError(`No ${lookup.referenceTo} record found for filter ${Object.entries(filterList)}`);
+            }
           }
           
           const queriedRecordId = foundRecord.Id;
@@ -253,7 +263,12 @@ export default class Import extends SfdxCommand {
         const chunkResults: RecordResult[] = await conn.sobject(sobjectName)
           .upsert(records.slice(i, i + maxParallelUpsertRequests), externalIdField, { allowRecursive: true, allOrNone: this.flags.allornone })
           .catch((err) => {
-            throw new SfdxError(`Error upserting records: ${err}`);
+            if (this.flags.ignoreerrors) {
+              this.ux.log(`Error upserting records: ${err}`);
+            }
+            else {
+              throw new SfdxError(`Error upserting records: ${err}`);
+            }
           });
         sobjectsResult.push(...chunkResults);
       }
@@ -265,7 +280,12 @@ export default class Import extends SfdxCommand {
       // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
       sobjectsResult = await conn.sobject(sobjectName).update(records, { allowRecursive: true, allOrNone: this.flags.allornone })
                                                       .catch(err => {
-                                                        throw new SfdxError(`Error importing records: ${err}`);
+                                                        if (this.flags.ignoreerrors) {
+                                                          this.ux.log(`Error importing records: ${err}`);
+                                                        }
+                                                        else {
+                                                          throw new SfdxError(`Error importing records: ${err}`);
+                                                        }
                                                       });
     }
     else {
@@ -275,7 +295,12 @@ export default class Import extends SfdxCommand {
       // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
       sobjectsResult = await conn.sobject(sobjectName).insert(records, { allowRecursive: true, allOrNone: this.flags.allornone })
                                                       .catch(err => {
-                                                        throw new SfdxError(`Error importing records: ${err}`);
+                                                        if (this.flags.ignoreerrors) {
+                                                          this.ux.log(`Error importing records: ${err}`);
+                                                        }
+                                                        else {
+                                                          throw new SfdxError(`Error importing records: ${err}`);
+                                                        }
                                                       });
     }
 
