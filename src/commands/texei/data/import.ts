@@ -16,6 +16,7 @@ const messages = Messages.loadMessages("texei-sfdx-plugin", "data-import");
 let conn: Connection;
 let recordIdsMap: Map<string, string>;
 let lookupOverrideMap: Map<string, Set<string>>;
+let batchSizeMap: Map<string, number>;
 let queriedLookupOverrideRecords: Map<string, Record[]>;
 let remainingDataFiles: Set<string>;
 let isVerbose: boolean = false;
@@ -95,6 +96,11 @@ export default class Import extends SfdxCommand {
     // Used later to parse remaining files if a lookup override is found
     remainingDataFiles = new Set(dataFiles);
 
+    // Get potential batch sizes
+    if (this.flags.dataplan) {
+      batchSizeMap = await this.getObjectsBatchSize(this.flags.dataplan);
+    }
+
     // Read and import data
     for (let i = 0; i < dataFiles.length; i++) {
       const dataFile = dataFiles[i];
@@ -110,7 +116,7 @@ export default class Import extends SfdxCommand {
         const objectRecords:Array<Record> = objectData.records;
 
         await this.prepareDataForInsert(objectName, objectRecords);
-        await this.upsertData(objectRecords, objectName, externalIdField);
+        await this.upsertData(objectRecords, objectName, externalIdField, dataFile);
 
         this.ux.stopSpinner(`Done.`);
       }
@@ -271,7 +277,7 @@ export default class Import extends SfdxCommand {
     }
   }
 
-  private async upsertData(records: Array<any>, sobjectName: string, externalIdField: string) {
+  private async upsertData(records: Array<any>, sobjectName: string, externalIdField: string, dataFileName: string) {
     
     let sobjectsResult:Array<RecordResult> = new Array<RecordResult>();
 
@@ -282,8 +288,8 @@ export default class Import extends SfdxCommand {
 
       // max. parallel upsert requests as supported by jsforce (default)
       // https://github.com/jsforce/jsforce/blob/82fcc5284215e95047d0f735dd3037a1aeba5d88/lib/connection.js#L82
-      const maxParallelUpsertRequests = 10;
-
+      const maxParallelUpsertRequests = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 10;
+      
       for (var i = 0; i < records.length; i += maxParallelUpsertRequests) {
         // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
         const chunkResults: RecordResult[] = await conn.sobject(sobjectName)
@@ -303,31 +309,41 @@ export default class Import extends SfdxCommand {
       // There is an Id, so it's an update
       this.debug(`DEBUG updating ${sobjectName} records`);
 
-      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-      sobjectsResult = await conn.sobject(sobjectName).update(records, { allowRecursive: true, allOrNone: this.flags.allornone })
-                                                      .catch(err => {
-                                                        if (this.flags.ignoreerrors) {
-                                                          this.ux.log(`Error importing records: ${err}`);
-                                                        }
-                                                        else {
-                                                          throw new SfdxError(`Error importing records: ${err}`);
-                                                        }
-                                                      });
+      // Checking if a batch size is specified
+      const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;  
+      for (var i = 0; i < records.length; i += batchSize) {
+        // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+        const chunkResults: RecordResult[] = await conn.sobject(sobjectName).update(records.slice(i, i + batchSize), { allowRecursive: true, allOrNone: this.flags.allornone })
+                                                        .catch(err => {
+                                                          if (this.flags.ignoreerrors) {
+                                                            this.ux.log(`Error importing records: ${err}`);
+                                                          }
+                                                          else {
+                                                            throw new SfdxError(`Error importing records: ${err}`);
+                                                          }
+                                                        });
+        sobjectsResult.push(...chunkResults);
+      }
     }
     else {
       // No Id, insert
       this.debug(`DEBUG inserting ${sobjectName} records`);
 
-      // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-      sobjectsResult = await conn.sobject(sobjectName).insert(records, { allowRecursive: true, allOrNone: this.flags.allornone })
-                                                      .catch(err => {
-                                                        if (this.flags.ignoreerrors) {
-                                                          this.ux.log(`Error importing records: ${err}`);
-                                                        }
-                                                        else {
-                                                          throw new SfdxError(`Error importing records: ${err}`);
-                                                        }
-                                                      });
+      // Checking if a batch size is specified
+      const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;  
+      for (var i = 0; i < records.length; i += batchSize) {
+        // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+        const chunkResults: RecordResult[] = await conn.sobject(sobjectName).insert(records.slice(i, i + batchSize), { allowRecursive: true, allOrNone: this.flags.allornone })
+                                                        .catch(err => {
+                                                          if (this.flags.ignoreerrors) {
+                                                            this.ux.log(`Error importing records: ${err}`);
+                                                          }
+                                                          else {
+                                                            throw new SfdxError(`Error importing records: ${err}`);
+                                                          }
+                                                        });
+        sobjectsResult.push(...chunkResults);
+      }
     }
 
     // Some errors are part of RecordResult but don't throw an exception
@@ -451,10 +467,11 @@ export default class Import extends SfdxCommand {
       // Read objects list from file
       const readFile = util.promisify(fs.readFile);
       const dataPlan: DataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
+      // Save lookup override
       for (const [key, value] of Object.entries(dataPlan.lookupOverride)) {
         const values: Set<string> = new Set<string>((value as string).split(',').map(el => el.trim()));
         overrideMap.set(key, values);
-      }
+      }  
     }
     else {
       throw new SfdxError(`dataplan flag is mandatory when using lookup overrides`);
@@ -479,5 +496,25 @@ export default class Import extends SfdxCommand {
     retrievedRecords = (await conn.autoFetchQuery(`Select ${Array.from(fieldsToQuery).join(',')} from ${sObjectName}`, options)).records;
     
     return retrievedRecords;
+  }
+
+  // TODO: refactor with createLookupOverrideMapV2 to avoid reading dataplan twice
+  private async getObjectsBatchSize(dataplan: string): Promise<Map<string, number>> {
+    let bsMap: Map<string, number> = new Map<string, number>();
+
+    // Read objects list from file
+    const readFile = util.promisify(fs.readFile);
+    const dataPlan: DataPlan = JSON.parse(await readFile(dataplan, "utf8"));
+    // Save batch size
+    let index = 1;
+    for (const sObject of dataPlan.sObjects) {
+      if (sObject.batchSize) {
+        const fileName = `${index}-${sObject.name}${sObject.label ? '-'+sObject.label : ''}.json`;
+        bsMap.set(fileName, sObject.batchSize);
+      }
+      index++;
+    }      
+
+    return bsMap;
   }
 }

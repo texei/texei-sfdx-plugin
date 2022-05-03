@@ -12,4 +12,5 @@ interface DataPlanSObject {
     externalId: string;
     excludedFields: Array<string>;
     lookupOverride?: {};
+    batchSize?: number;
 }
