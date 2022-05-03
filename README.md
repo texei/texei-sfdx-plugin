@@ -21,8 +21,8 @@ Link the plugin: sfdx plugins:link .
 
 <!-- commands -->
 * [`sfdx texei:contractstatus:value:add -l <string> -a <string> [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeicontractstatusvalueadd--l-string--a-string--s-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
-* [`sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataexport--d-string--o-string--p-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
-* [`sfdx texei:data:import -d <string> [-a] [-o] [-u <string>] [--apiversion <string>] [--verbose] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataimport--d-string--a--o--u-string---apiversion-string---verbose---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-a <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataexport--d-string--o-string--p-string--a-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx texei:data:import -d <string> [-a] [-o] [-p <string>] [-u <string>] [--apiversion <string>] [--verbose] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataimport--d-string--a--o--p-string--u-string---apiversion-string---verbose---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:data:plan:generate -d <string> -o <string> [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataplangenerate--d-string--o-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:debug:lwc:enable [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidebuglwcenable--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:org:contractfieldhistory:fix [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeiorgcontractfieldhistoryfix--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
@@ -75,16 +75,18 @@ EXAMPLE
 
 _See code: [src/commands/texei/contractstatus/value/add.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.14.4/src/commands/texei/contractstatus/value/add.ts)_
 
-## `sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+## `sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-a <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 export objects' data from org
 
 ```
 USAGE
-  $ sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-u <string>] [--apiversion <string>] [--json] 
-  [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+  $ sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-a <string>] [-u <string>] [--apiversion <string>] 
+  [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
 
 OPTIONS
+  -a, --apitype=rest|bulk                                                           [default: rest] API Type to use
+
   -d, --outputdir=outputdir                                                         (required) directory where to store
                                                                                     files
 
@@ -111,14 +113,14 @@ EXAMPLES
 
 _See code: [src/commands/texei/data/export.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.14.4/src/commands/texei/data/export.ts)_
 
-## `sfdx texei:data:import -d <string> [-a] [-o] [-u <string>] [--apiversion <string>] [--verbose] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+## `sfdx texei:data:import -d <string> [-a] [-o] [-p <string>] [-u <string>] [--apiversion <string>] [--verbose] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 import objects' data to org
 
 ```
 USAGE
-  $ sfdx texei:data:import -d <string> [-a] [-o] [-u <string>] [--apiversion <string>] [--verbose] [--json] [--loglevel 
-  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+  $ sfdx texei:data:import -d <string> [-a] [-o] [-p <string>] [-u <string>] [--apiversion <string>] [--verbose] 
+  [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
 
 OPTIONS
   -a, --allornone                                                                   any failed records in a call cause
@@ -130,6 +132,8 @@ OPTIONS
 
   -o, --ignoreerrors                                                                errors are displayed as warnings
                                                                                     only and import will continue
+
+  -p, --dataplan=dataplan                                                           path to data plan file
 
   -u, --targetusername=targetusername                                               username or alias for the target
                                                                                     org; overrides default target org

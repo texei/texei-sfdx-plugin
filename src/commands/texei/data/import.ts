@@ -1,11 +1,10 @@
 import { flags, SfdxCommand } from "@salesforce/command";
-import { Messages, SfdxError } from "@salesforce/core";
+import { Messages, SfdxError, Connection } from "@salesforce/core";
 import { AnyJson } from "@salesforce/ts-types";
 import * as fs from "fs";
 import * as path from "path";
-import { Record, RecordResult, SuccessResult, ErrorResult, Connection } from 'jsforce';
+import { Record, RecordResult, SuccessResult, ErrorResult, ExecuteOptions } from 'jsforce';
 const util = require("util");
-const csv = require("csvtojson");
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -52,6 +51,11 @@ export default class Import extends SfdxCommand {
       description: messages.getMessage("ignoreErrorsFlagDescription"),
       required: false
     }),
+    dataplan: flags.string({
+      char: "p",
+      description: messages.getMessage("dataPlanFlagDescription"),
+      required: false
+    }),
     verbose: flags.builtin({
       description: messages.getMessage('verbose'),
     })
@@ -67,7 +71,7 @@ export default class Import extends SfdxCommand {
   protected static requiresProject = false;
 
   public async run(): Promise<AnyJson> {
-    conn = await this.org.getConnection();
+    conn = this.org.getConnection();
     recordIdsMap = new Map<string, string>();
     isVerbose = this.flags.verbose;
 
@@ -105,17 +109,6 @@ export default class Import extends SfdxCommand {
         const externalIdField = objectData?.attributes?.externalId;
         const objectRecords:Array<Record> = objectData.records;
 
-        // TODO: If there is a lookupOverride, query all records from sObject
-        // Parse file 1st record if there are lookup override
-        // If yes, collect all needed fields + Id, and query all records for all needed sObjects
-        // Create a map with constructed Ids from lookupOverride, mapped with the real record Id
-        // Use it later to replace correctly before insert
-        // Clean everything at the end
-        // Look for performance: maybe it's better once a file with a lookupOverride is found to:
-        // Pre-read all next files and see what sObjects are needed to see if we need to keep the query result
-        // Maybe do it at first from the very beginning to have all fields needed from all files ? (should be better)
-        // Also keep a number of files using the sObject, so that once it's not useful anymore we can clean the memory from list not useful anymore
-        // conn.bulk.query("SELECT Id, Name, NumberOfEmployees FROM Account")
         await this.prepareDataForInsert(objectName, objectRecords);
         await this.upsertData(objectRecords, objectName, externalIdField);
 
@@ -163,7 +156,7 @@ export default class Import extends SfdxCommand {
           if (lookupOverrideMap === undefined) {
             // If the first override we find, parse all files to get all needed fields
             // Do it only know so that the command won't be slower if there is no override used
-            lookupOverrideMap = await this.createLookupOverrideMap();
+            lookupOverrideMap = await this.createLookupOverrideMapV2();
 
             if (lookupOverrideMap === undefined) {
               throw new SfdxError(`A lookupOverride is specified in your data plan for sObject ${lookup.referenceTo}, but no field is associated to it. Either remove the lookupOverride for this sObject or add field(s).`);
@@ -171,60 +164,93 @@ export default class Import extends SfdxCommand {
             queriedLookupOverrideRecords = new Map<string, Record[]>();
           }
           
-          const sObjectName = sobject[lookup.relationshipName].attributes.type;
+          const sObjectLookupName: string = sobject[lookup.relationshipName].attributes.type;
           let sObjectRecords: Record[];
 
-          if (queriedLookupOverrideRecords[sObjectName]) {
+          if (queriedLookupOverrideRecords[sObjectLookupName]) {
             // Records already queried, use them
-            sObjectRecords = queriedLookupOverrideRecords[sObjectName];
+            sObjectRecords = queriedLookupOverrideRecords[sObjectLookupName];
           }
           else {
             // Records not previously queried, do it now
-            sObjectRecords = await this.getObjectRecords(sObjectName, lookupOverrideMap[sObjectName]);
-            queriedLookupOverrideRecords[sObjectName] = sObjectRecords;
+            sObjectRecords = await this.getObjectRecords(sObjectLookupName, lookupOverrideMap.get(sObjectLookupName));
+            queriedLookupOverrideRecords[sObjectLookupName] = sObjectRecords;
           }
 
           let filterList = Object.assign({}, sobject[lookup.relationshipName]);
           delete filterList.attributes;
 
           const start = Date.now();
-          this.debug(`Searching for record for lookup override`);
+          
+          let searchedKeyValues: string = '';
 
-          const foundRecord = sObjectRecords.find(element => {            
+          const foundRecord = sObjectRecords.find(element => {   
+            
+            searchedKeyValues = '';
+
             for (const [key, value] of Object.entries(filterList)) {
-              this.debug(`Looking for value ${value} for field ${key}`);
-              this.debug(`Value for current record: ${element[key]}`);
+              
+              // It's a child relationship
+              // TODO: Do it correctly with a recursive function
+              if (filterList[key]?.attributes) {
+                for (const [childkey, childvalue] of Object.entries(filterList[key])) {
 
-              // Can't use !== because numbers and string values having only numbers in them are returned the same way by the bulk API
-              if (element[key] != value) {
-                return;
+                  if (childkey !== 'attributes') {
+                    searchedKeyValues += `${key}.${childkey}: ${childvalue}, `;
+                    
+                    if (element[key] == null || element[key][childkey] != childvalue) {
+                      //this.debug("Filter KO (Child)");
+                      return;
+                    }
+                    else {
+                      //this.debug("Filter OK (Child)");
+                    }
+                  }
+                }
+              }
+              else {
+                searchedKeyValues += `${key}: ${value}, `;
+
+                // Can't use !== because numbers and string values having only numbers in them are returned the same way by the bulk API
+                if (element[key] != value) {
+                  //this.debug("Filter KO");
+                  return;
+                }
+                else {
+                  //this.debug("Filter OK");
+                }
               }
             }
 
             return element;
           });
+          if (searchedKeyValues?.length > 1) {
+            searchedKeyValues = searchedKeyValues.substring(0, searchedKeyValues.length - 2);
+          }
+
           const duration = Date.now() - start;
           this.debug(`Finished searching record in ${duration} milliseconds`);
 
-          // TODO: better output than Object.entries(filterList)
           // Instead of looping for every record, create a map first from all needed values (so only one loop)
           if (foundRecord === undefined) {
             if (this.flags.ignoreerrors) {
-              this.ux.log(`No ${lookup.referenceTo} record found for filter ${Object.entries(filterList)}`);
+              this.ux.log(`No ${lookup.referenceTo} record found for filter ${searchedKeyValues}`);
             }
             else {
+              //throw new SfdxError(`No ${lookup.referenceTo} record found for filter ${searchedKeyValues}`);
               throw new SfdxError(`No ${lookup.referenceTo} record found for filter ${Object.entries(filterList)}`);
             }
           }
-          
-          const queriedRecordId = foundRecord.Id;
-          if (isVerbose) {
-            this.ux.log(`RecordId found (${queriedRecordId}) for sObject ${sObjectName} and filter ${Object.entries(filterList)}`);
-          }
+          else {
+            const queriedRecordId = foundRecord.Id;
+            if (isVerbose) {
+              this.ux.log(`RecordId found (${queriedRecordId}) for sObject ${sObjectLookupName} and filter ${searchedKeyValues}`);
+            }
 
-          // Replace relationship name with field name + found Id
-          delete sobject[lookup.relationshipName];
-          sobject[lookup.name] = queriedRecordId;
+            // Replace relationship name with field name + found Id
+            delete sobject[lookup.relationshipName];
+            sobject[lookup.name] = queriedRecordId;
+          }
         }  
       }
 
@@ -312,10 +338,20 @@ export default class Import extends SfdxCommand {
         const errors:ErrorResultDetail = res.errors[0] as any;
         // TODO: add a flag to allow this to be added to the logs
         if (externalIdField && errors.statusCode === 'METHOD_NOT_ALLOWED') {
-          throw new SfdxError(`Unable to upsert records. Make sure you're not importing records where ${externalIdField} External Id field is missing.`);
+          if (this.flags.ignoreerrors) {
+            this.ux.log(`Unable to upsert records. Make sure you're not importing records where ${externalIdField} External Id field is missing.`);
+          }
+          else {
+            throw new SfdxError(`Unable to upsert records. Make sure you're not importing records where ${externalIdField} External Id field is missing.`);
+          }
         }
         else if (errors.statusCode !== 'ALL_OR_NONE_OPERATION_ROLLED_BACK') {
-          throw new SfdxError(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields?.length > 0?'('+errors.fields+')':''}`);
+          if (this.flags.ignoreerrors) {
+            this.ux.log(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields?.length > 0?'('+errors.fields+')':''}`);
+          }
+          else {
+            throw new SfdxError(`Error importing record ${records[i].attributes.referenceId}: ${errors.statusCode}-${errors.message}${errors.fields?.length > 0?'('+errors.fields+')':''}`);
+          }
         }
       }
     }
@@ -408,46 +444,20 @@ export default class Import extends SfdxCommand {
     return lookups;
   }
 
-  private async createLookupOverrideMap(): Promise<Map<string, Set<string>>> {
+  private async createLookupOverrideMapV2(): Promise<Map<string, Set<string>>> {
     let overrideMap: Map<string, Set<string>> = new Map<string, Set<string>>();
 
-    for (const dataFile of remainingDataFiles) {
-
-      // If file doesn't start with a number, just don't parse it (could be data-plan.json)
-      if (!isNaN(dataFile.substring(0,1) as any)) {
-        const objectRecords:Array<Record> = (await this.readFile(dataFile)).records;
-        if (objectRecords.length > 0) {
-          const currentRec = objectRecords[0];
-
-          // For all fields, look if one if a lookup override
-          for (const [key] of Object.entries(currentRec)) {
-
-            if (currentRec[key]?.attributes) {
-              const sobjectName = currentRec[key]?.attributes.type;
-              let fieldsToQuery: Set<string> = new Set<string>();
-
-              // If there is a lookup override, look all fields needed
-              for (const [objectkey] of Object.entries(currentRec[key])) {
-                
-                // Don't do anything if it's the "attributes" key containing technical info
-                if (objectkey !== 'attributes') {
-                  fieldsToQuery.add(objectkey);
-                }
-              }
-
-              // If there are already fields to query for this object, append them
-              if (overrideMap[sobjectName]) {
-                fieldsToQuery.forEach(item => overrideMap[sobjectName].add(item));
-              }
-              else {
-                // Else create the Set first
-                overrideMap[sobjectName] = new Set<string>();
-                fieldsToQuery.forEach(item => overrideMap[sobjectName].add(item));
-              }
-            }
-          }
-        }
+    if (this.flags.dataplan) {
+      // Read objects list from file
+      const readFile = util.promisify(fs.readFile);
+      const dataPlan: DataPlan = JSON.parse(await readFile(this.flags.dataplan, "utf8"));
+      for (const [key, value] of Object.entries(dataPlan.lookupOverride)) {
+        const values: Set<string> = new Set<string>((value as string).split(',').map(el => el.trim()));
+        overrideMap.set(key, values);
       }
+    }
+    else {
+      throw new SfdxError(`dataplan flag is mandatory when using lookup overrides`);
     }
 
     return overrideMap;
@@ -455,41 +465,19 @@ export default class Import extends SfdxCommand {
 
   private async getObjectRecords(sObjectName: string, fieldsToQuery: Set<string>): Promise<Array<Record>> {
 
-    const bulkQuery =  async (sObjectName: string, fieldsToQuery: Set<string>) => new Promise<Array<Record>>(async (resolve, reject) => {
-      let retrievedRecords: Array<Record> = new Array<Record>();
+    let retrievedRecords: Array<Record> = new Array<Record>();
 
-      // In case it's not, add Id field
-      fieldsToQuery.add('Id');
+    // In case it's not, add Id field
+    fieldsToQuery.add('Id');
 
-      conn.bulk.pollTimeout = 250000;
-      this.debug(`Querying ${sObjectName} for lookup override`);
-
-      // Manually reading stream instead on using jsforce directly
-      // Because jsforce will return '75008.0' instead of 75008 for a number
-      const recordStream = conn.bulk.query(
-        `Select ${Array.from(fieldsToQuery).join(',')} from ${sObjectName}`
-      );
-      const readStream = recordStream.stream();
-      const csvToJsonParser = csv({flatKeys: false, checkType: true});
-      readStream.pipe(csvToJsonParser);
-  
-      csvToJsonParser.on("data", (data) => {
-        retrievedRecords.push(JSON.parse(data.toString('utf8')));
-      });
-
-      recordStream.on("error", (error) => {
-        reject(error);
-      });
-  
-      csvToJsonParser.on("error", (error) => {
-        reject(error);
-      });
-  
-      csvToJsonParser.on("done", async () => {
-        resolve(retrievedRecords);
-      });
-    });
-
-    return await bulkQuery(sObjectName, fieldsToQuery);
+    // API Default limit is 10 000, just check if we need to extend it
+    const recordNumber:number = ((await conn.query(`Select count(Id) numberOfRecords from ${sObjectName}`)).records[0] as any).numberOfRecords;
+    let options:ExecuteOptions = {};
+    if (recordNumber > 10000) {
+      options.maxFetch = recordNumber;
+    }
+    retrievedRecords = (await conn.autoFetchQuery(`Select ${Array.from(fieldsToQuery).join(',')} from ${sObjectName}`, options)).records;
+    
+    return retrievedRecords;
   }
 }
