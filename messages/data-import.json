@@ -3,5 +3,6 @@
     "inputFlagDescription": "directory with files to import",
     "allOrNoneFlagDescription": "any failed records in a call cause all changes for the call to be rolled back",
     "ignoreErrorsFlagDescription": "errors are displayed as warnings only and import will continue",
+    "dataPlanFlagDescription": "path to data plan file",
     "verbose": "verbose output of import result"
 }

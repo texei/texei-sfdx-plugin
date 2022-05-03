@@ -1,10 +1,11 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import { Messages, SfdxError, Connection } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
-import { ExecuteOptions } from 'jsforce';
+import { Record, ExecuteOptions } from 'jsforce';
 import * as fs from 'fs';
 import * as path from 'path';
 const util = require("util");
+const csv = require("csvtojson");
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -30,7 +31,8 @@ export default class Export extends SfdxCommand {
   protected static flagsConfig = {
     outputdir: flags.string({char: 'd', description: messages.getMessage('outputdirFlagDescription'), required: true}),
     objects: flags.string({char: 'o', description: messages.getMessage('objectsFlagDescription'), required: false}),
-    dataplan: flags.string({char: 'p', description: messages.getMessage('dataPlanFlagDescription'), required: false})
+    dataplan: flags.string({char: 'p', description: messages.getMessage('dataPlanFlagDescription'), required: false}),
+    apitype: flags.string({ char: 'a', description: messages.getMessage('apiTypeFlagDescription'), options: ['rest', 'bulk'], default: 'rest' })
   };
 
   // Comment this out if your command does not require an org username
@@ -197,13 +199,51 @@ export default class Export extends SfdxCommand {
                          FROM ${sobject.name}
                          ${sobject.filters ? 'WHERE '+sobject.filters : ''}
                          ${sobject.orderBy ? 'ORDER BY '+sobject.orderBy : ''}`;
-    // API Default limit is 10 000, just check if we need to extend it
-    const recordNumber:number = ((await conn.query(`Select count(Id) numberOfRecords from ${sobject.name}`)).records[0] as any).numberOfRecords;
-    let options:ExecuteOptions = {};
-    if (recordNumber > 10000) {
-      options.maxFetch = recordNumber;
+
+    let recordResults;
+
+    if (this.flags.apitype === 'bulk') {
+
+      const bulkQuery =  async (sObjectQuery: string) => new Promise<Array<Record>>(async (resolve, reject) => {
+        let retrievedRecords: Array<Record> = new Array<Record>();
+  
+        conn.bulk.pollTimeout = 250000;
+  
+        // Manually reading stream instead on using jsforce directly
+        // Because jsforce will return '75008.0' instead of 75008 for a number
+        const recordStream = conn.bulk.query(sObjectQuery);
+        const readStream = recordStream.stream();
+        const csvToJsonParser = csv({flatKeys: false, checkType: true});
+        readStream.pipe(csvToJsonParser);
+    
+        csvToJsonParser.on("data", (data) => {
+          retrievedRecords.push(JSON.parse(data.toString('utf8')));
+        });
+  
+        recordStream.on("error", (error) => {
+          reject(error);
+        });
+    
+        csvToJsonParser.on("error", (error) => {
+          reject(error);
+        });
+    
+        csvToJsonParser.on("done", async () => {
+          resolve(retrievedRecords);
+        });
+      });
+  
+      recordResults = await bulkQuery(recordQuery);
     }
-    const recordResults = (await conn.autoFetchQuery(recordQuery, options)).records;
+    else {
+      // API Default limit is 10 000, just check if we need to extend it
+      const recordNumber:number = ((await conn.query(`Select count(Id) numberOfRecords from ${sobject.name}`)).records[0] as any).numberOfRecords;
+      let options:ExecuteOptions = {};
+      if (recordNumber > 10000) {
+        options.maxFetch = recordNumber;
+      }
+      recordResults = (await conn.autoFetchQuery(recordQuery, options)).records;
+    }
 
     // Replace Lookup Ids + Record Type Ids by references
     await this.cleanJsonRecord(sobject, sObjectLabel, recordResults, recordIdsMap, lookups, overriddenLookups, userFieldsReference);
@@ -232,6 +272,11 @@ export default class Export extends SfdxCommand {
     }
 
     for (const record of records) {
+
+      if (record.attributes === undefined) {
+        // Not returned by bulk API
+        record.attributes = {};
+      }
 
       // Delete record url, useless to reimport somewhere else
       delete record.attributes.url;
@@ -267,7 +312,7 @@ export default class Export extends SfdxCommand {
         if (record[lookup]) {
           // If lookup isn't empty, remove useless information
           // Keeping "type" so we don't have to do a describe to know what is the related sObject at import
-          delete record[lookup].attributes.url;
+          delete record[lookup]?.attributes?.url;
         }
         else {
           // Remove empty lookup relationship field
