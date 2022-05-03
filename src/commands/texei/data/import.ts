@@ -74,6 +74,7 @@ export default class Import extends SfdxCommand {
   public async run(): Promise<AnyJson> {
     conn = this.org.getConnection();
     recordIdsMap = new Map<string, string>();
+    batchSizeMap = new Map<string, number>();
     isVerbose = this.flags.verbose;
 
     // Just add potential SfdxOrgUser that could be used during export
