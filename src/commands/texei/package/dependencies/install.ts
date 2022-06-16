@@ -260,9 +260,13 @@ export default class Install extends SfdxCommand {
       if (namespaces != null) {
         query += ` and Package2.NamespacePrefix IN ('${namespaces.join('\',\'')}')`;
       }
-
+      
+      // If Build Number is RELEASED, filter on IsReleased
+      if (vers[3] == 'RELEASED') {
+        query += `and IsReleased=true `;
+      }
       // If Build Number isn't set to LATEST, look for the exact Package Version
-      if (vers[3] !== 'LATEST') {
+      else if (vers[3] !== 'LATEST') {
         query += `and BuildNumber=${vers[3]} `;
       }
 
