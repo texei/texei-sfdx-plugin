@@ -21,6 +21,7 @@ Link the plugin: sfdx plugins:link .
 
 <!-- commands -->
 * [`sfdx texei:contractstatus:value:add -l <string> -a <string> [-s <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeicontractstatusvalueadd--l-string--a-string--s-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx texei:cpqsettings:set -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeicpqsettingsset--f-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-a <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataexport--d-string--o-string--p-string--a-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:data:import -d <string> [-a] [-o] [-p <string>] [-u <string>] [--apiversion <string>] [--verbose] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataimport--d-string--a--o--p-string--u-string---apiversion-string---verbose---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx texei:data:plan:generate -d <string> -o <string> [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-texeidataplangenerate--d-string--o-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
@@ -76,6 +77,35 @@ EXAMPLE
 ```
 
 _See code: [src/commands/texei/contractstatus/value/add.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.15.1/src/commands/texei/contractstatus/value/add.ts)_
+
+## `sfdx texei:cpqsettings:set -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+set CPQ Settings from file
+
+```
+USAGE
+  $ sfdx texei:cpqsettings:set -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel 
+  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -f, --inputfile=inputfile                                                         (required) path to CPQ Settings file
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+EXAMPLE
+  sfdx texei:cpqsettings:set
+```
+
+_See code: [src/commands/texei/cpqsettings/set.ts](https://github.com/texei/texei-sfdx-plugin/blob/v1.15.1/src/commands/texei/cpqsettings/set.ts)_
 
 ## `sfdx texei:data:export -d <string> [-o <string>] [-p <string>] [-a <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
