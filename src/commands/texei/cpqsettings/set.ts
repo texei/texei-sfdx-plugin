@@ -39,6 +39,9 @@ export default class Set extends SfdxCommand {
   protected static requiresProject = false;
 
   public async run(): Promise<any> {
+
+    this.ux.log(`[Warning] This command is based on HTML parsing because of a lack of supported APIs, but may break at anytime. Use at your own risk.`);
+
     let result = {};
 
     // Get Config File
@@ -82,17 +85,38 @@ export default class Set extends SfdxCommand {
             this.ux.startSpinner(`Looking for '${key}'`, null, { stdout: true });
 
             // Getting id for label
+            // Await because some fields only appears after a few seconds when checking another one
+            await page.waitForXPath(`//label[contains(text(), '${key}')]`);
             const labels = await page.$x(`//label[contains(text(), '${key}')]`);
-            const attributeId: string = await (await labels[0].getProperty('htmlFor')).jsonValue();
-            const escapedAttributeId = attributeId.replace(/\:/g, '\\:');
+            let attributeId: string = await (await labels[0].getProperty('htmlFor')).jsonValue();
+            let escapedAttributeId = '';
+
+            if (!attributeId) {
+                // unfortunately htmlFor isn't defined for picklists
+                // this is very dirty :'(
+                let parentId: string = await (await (await labels[0].getProperty('parentNode')).getProperty('id')).jsonValue();
+                parentId = parentId.replace('_helpText-_help', '');
+                const originalElementId: number = parseInt(parentId.substring(parentId.lastIndexOf(":j_id") + 5), 10);
+                const finalElementId = originalElementId + 1;
+                parentId = parentId.substring(0, parentId.length - originalElementId.toString().length);
+                attributeId = parentId + finalElementId;
+            } 
+
+            escapedAttributeId = attributeId.replace(/\:/g, '\\:');
 
             // Getting target input
-            console.log(escapedAttributeId);
-            const targetInput = await page.$(`#${escapedAttributeId}`);
-            const targetType = await (await targetInput.getProperty('type')).jsonValue();
+            //const targetInput = await page.$(`#${escapedAttributeId}`);
+            let targetType = '';
+            const targetInput = await page.$(`[name="${escapedAttributeId}"]`);
+            const nodeType = await (await targetInput.getProperty('nodeName')).jsonValue();
+            if (nodeType === 'INPUT') {
+                targetType = await (await targetInput.getProperty('type')).jsonValue();
+            }
+            else if (nodeType === 'SELECT') {
+                targetType = 'select';
+            }
 
             let currentValue = '';
-
             if (targetType === 'checkbox') {
                 currentValue = await (await targetInput.getProperty('checked')).jsonValue();
 
@@ -110,34 +134,45 @@ export default class Set extends SfdxCommand {
                 currentValue = await (await targetInput.getProperty('value')).jsonValue();
 
                 if (currentValue !== cpqSettings[tabKey][key]) {
-                    //await page.focus(`#${escapedAttributeId}`);
-                    // TODO: do it correctly
-                    console.log('1');
-                    await page.evaluate(() => {
-                        return new Promise((resolve, reject) => {
-                            try {
-                                document.querySelector('#page\\:form\\:pb\\:j_id259\\:j_id265').setAttribute('value', '7');
-                                console.log('2');
-                                resolve('ok');
-                            } catch (err) {
-                                reject(err.toString());
-                            }
-                        });
-                    });
-                    console.log('3');
+                    
+                    await targetInput.click({clickCount: 3});
+                    await targetInput.press('Backspace');
+                    await targetInput.type(`${cpqSettings[tabKey][key]}`);
+                    await page.keyboard.press("Tab");
 
-                    //await targetInput.click({clickCount: 3});
-                    //await targetInput.press('Backspace'); 
-                    //await targetInput.type(`${cpqSettings[tabKey][key]}`);
-    
                     this.ux.stopSpinner(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
                 }
                 else {
                     this.ux.stopSpinner(`Value already ok`);
                 }
-
             } 
-            
+            else if (targetType === 'select') {
+                
+                await page.waitForXPath(`//select[@name="${attributeId}"]/option[text()='${cpqSettings[tabKey][key]}']`);
+                const selectedOptionElement = await page.$(`select[name="${escapedAttributeId}"] option[selected]`);
+                if (selectedOptionElement) {
+                    // There is a value selected
+                    currentValue = await (await (await page.$(`select[name="${escapedAttributeId}"] option[selected]`)).getProperty('text')).jsonValue();
+                }
+                else {
+                    // No selected value
+                    currentValue = '';
+                }
+
+                if (currentValue !== cpqSettings[tabKey][key]) {
+                    
+                    const optionElement = (await page.$x(`//select[@name="${attributeId}"]/option[text()='${cpqSettings[tabKey][key]}']`))[0];
+                    await page.evaluate((optionElement) => {
+                        optionElement.selected = true;
+                    }, optionElement);
+    
+                    this.ux.stopSpinner(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+                }
+                else {
+                    this.ux.stopSpinner(`Value already ok`);
+                } 
+            }
+
             // Adding to result
             result[tabKey][key] = {
                 'currentValue': currentValue,
