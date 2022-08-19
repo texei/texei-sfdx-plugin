@@ -5,6 +5,7 @@ import {
   getLayoutsForObject,
   getRecordTypesForObject
 } from "../../../shared/sfdxProjectFolder";
+import { nodesNotAllowed, nodesHavingDefault } from "../../../shared/skinnyProfileHelper";
 import { AnyJson } from "@salesforce/ts-types";
 import * as path from 'path';
 var fs = require('fs');
@@ -45,19 +46,6 @@ export default class Retrieve extends SfdxCommand {
 
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
   protected static requiresProject = true;
-
-  // This is removed, should be on a Permission Set
-  public nodesToRemove = ['userPermissions',
-                          'classAccesses',
-                          'externalDataSourceAccesses',
-                          'fieldPermissions',
-                          'objectPermissions',
-                          'pageAccesses',
-                          'tabVisibilities',
-                          'customMetadataTypeAccesses'];
-
-  // These metadata are on Permission Set, but Default is selected on Profile. Keeping only the default value                       
-  public nodesHavingDefault = ['applicationVisibilities','recordTypeVisibilities'];
 
   public async run(): Promise<any> {
     
@@ -215,10 +203,10 @@ export default class Retrieve extends SfdxCommand {
       if (profileJson.Profile.hasOwnProperty(nodeKey)) {
 
         // Remove node
-        if (this.nodesToRemove.includes(nodeKey)) {
+        if (nodesNotAllowed.includes(nodeKey)) {
           delete profileJson.Profile[nodeKey];
         } 
-        else if (this.nodesHavingDefault.includes(nodeKey)) {
+        else if (nodesHavingDefault.includes(nodeKey)) {
 
           // Remove node, keeping only default value
           for (const nodeValue in profileJson.Profile[nodeKey]) {

@@ -1,8 +1,8 @@
 import { flags, SfdxCommand } from '@salesforce/command';
-import { JsonArray, JsonMap } from '@salesforce/ts-types';
-import { Messages, SfdxProjectJson, SfdxError } from '@salesforce/core';
+import { Messages, SfdxError } from '@salesforce/core';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getDefaultPackagePath } from "../../../shared/sfdxProjectFolder";
 
 const util = require('util');
 const xml2js = require('xml2js');
@@ -13,8 +13,6 @@ Messages.importMessagesDirectory(__dirname);
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'profile-clean');
-
-const defaultProfileFolder = 'force-app/main/default/profiles';
 
 export default class Clean extends SfdxCommand {
 
@@ -71,7 +69,7 @@ export default class Clean extends SfdxCommand {
     }
     else {
       // Else look in the default package directory
-      const defaultPackageDirectory = await this.getDefaultPath();
+      const defaultPackageDirectory = path.join(await getDefaultPackagePath(), 'profiles');
       profilesToClean = await this.getProfilesInPath(defaultPackageDirectory);
     }
 
@@ -154,37 +152,5 @@ export default class Clean extends SfdxCommand {
     }
     
     return profilesInPath;
-  }
-
-  // should probably be in a util class
-  private async getDefaultPath() {
-    
-    // Look for a default package directory
-    const options = SfdxProjectJson.getDefaultOptions();
-    const project = await SfdxProjectJson.create(options);
-    const packageDirectories = project.get('packageDirectories') as JsonArray || [];
-    
-    let foundPath;
-    for (let packageDirectory of packageDirectories) {
-      packageDirectory = packageDirectory as JsonMap;
-
-      if (packageDirectory.path && packageDirectory.default) {
-        
-        foundPath = path.join(
-          packageDirectory.path as string,
-          'main',
-          'default',
-          'profiles'
-        );
-        break;
-      }
-      
-      // If no default package directory is found, use the vanilla default DX folder 
-      if (!foundPath) {
-        foundPath = defaultProfileFolder;
-      }
-    }
-
-    return foundPath
   }
 }
