@@ -7,6 +7,7 @@ import { JsonArray, JsonMap } from '@salesforce/ts-types';
 import * as path from 'path';
 import * as fs from 'fs';
 const util = require('util');
+const defaultPackageFolder = path.join('force-app','main','default');
 
 export async function getMetadata(metadata: string) {
     // TODO: ignore some files
@@ -120,3 +121,33 @@ export async function getDefaultProjectPath() {
 
     return defaultProjectPath;
 }
+
+export async function getDefaultPackagePath() {
+    
+    // Look for a default package directory
+    const options = SfdxProjectJson.getDefaultOptions();
+    const project = await SfdxProjectJson.create(options);
+    const packageDirectories = project.get('packageDirectories') as JsonArray || [];
+    
+    let foundPath;
+    for (let packageDirectory of packageDirectories) {
+      packageDirectory = packageDirectory as JsonMap;
+
+      if (packageDirectory.path && packageDirectory.default) {
+        
+        foundPath = path.join(
+          packageDirectory.path as string,
+          'main',
+          'default'
+        );
+        break;
+      }
+      
+      // If no default package directory is found, use the vanilla default DX folder 
+      if (!foundPath) {
+        foundPath = defaultPackageFolder;
+      }
+    }
+
+    return foundPath
+  }
