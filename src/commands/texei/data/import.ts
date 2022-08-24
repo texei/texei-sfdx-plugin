@@ -3,7 +3,7 @@ import { Messages, SfdxError, Connection } from "@salesforce/core";
 import { AnyJson } from "@salesforce/ts-types";
 import * as fs from "fs";
 import * as path from "path";
-import { Record, RecordResult, SuccessResult, ErrorResult, ExecuteOptions } from 'jsforce';
+import { Record, RecordResult, SuccessResult, ErrorResult, ExecuteOptions, DescribeSObjectResult } from 'jsforce';
 const util = require("util");
 
 // Initialize Messages with the current plugin directory
@@ -20,6 +20,7 @@ let batchSizeMap: Map<string, number>;
 let queriedLookupOverrideRecords: Map<string, Record[]>;
 let remainingDataFiles: Set<string>;
 let isVerbose: boolean = false;
+let sObjectDescribeMap: Map<string, DescribeSObjectResult>;
 
 interface ErrorResultDetail {
   statusCode: string;
@@ -57,6 +58,11 @@ export default class Import extends SfdxCommand {
       description: messages.getMessage("dataPlanFlagDescription"),
       required: false
     }),
+    ignoreunavailablefields: flags.boolean({
+      char: "i",
+      description: messages.getMessage("ignoreUnavailableFieldsFlagDescription"),
+      required: false
+    }),
     verbose: flags.builtin({
       description: messages.getMessage('verbose'),
     })
@@ -75,6 +81,7 @@ export default class Import extends SfdxCommand {
     conn = this.org.getConnection();
     recordIdsMap = new Map<string, string>();
     batchSizeMap = new Map<string, number>();
+    sObjectDescribeMap = new Map<string, DescribeSObjectResult>();
     isVerbose = this.flags.verbose;
 
     // Just add potential SfdxOrgUser that could be used during export
@@ -145,6 +152,20 @@ export default class Import extends SfdxCommand {
     // Replace data to import with newly generated Record Type Ids
     for (const sobject of jsonData) {
 
+      // Remove fields that are not on target org if requested
+      if (this.flags.ignoreunavailablefields) {
+        for (const [key, value] of Object.entries(sobject)) {
+          this.debug(`${key}: ${value}`);
+
+          if (key !== 'attributes') {
+            if (sObjectDescribeMap.get(sobjectName).fields.find(element => element.name === key) === undefined) {
+              this.ux.warn(`Field doesn't exist on org or you don't have access to it, ignoring it for import: ${sobjectName}.${key}`);
+              delete sobject[key];
+            }
+          }
+        }
+      }
+      
       // Replace all lookups
       for (const lookup of lookups) {
 
@@ -442,7 +463,16 @@ export default class Import extends SfdxCommand {
   private async getLookupsForObject(objectName: string) {
 
     let lookups = [];
-    const describeResult = await conn.sobject(objectName).describe();
+    let describeResult: DescribeSObjectResult;
+    if (sObjectDescribeMap.get(objectName) !== undefined) {
+      // sObject has already been described, use it
+      describeResult = sObjectDescribeMap.get(objectName);
+    }
+    else {
+      // Call describe
+      describeResult = await conn.sobject(objectName).describe();
+      sObjectDescribeMap.set(objectName, describeResult);
+    }
 
     for (const field of describeResult.fields) {
       // If it's a lookup, also add it to the lookup list, to be replaced later
