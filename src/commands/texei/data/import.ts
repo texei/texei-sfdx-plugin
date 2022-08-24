@@ -157,7 +157,7 @@ export default class Import extends SfdxCommand {
         for (const [key, value] of Object.entries(sobject)) {
           this.debug(`${key}: ${value}`);
 
-          if (key !== 'attributes') {
+          if (key !== 'attributes' && !value?.hasOwnProperty('attributes')) {
             if (sObjectDescribeMap.get(sobjectName).fields.find(element => element.name === key) === undefined) {
               this.ux.warn(`Field doesn't exist on org or you don't have access to it, ignoring it for import: ${sobjectName}.${key}`);
               delete sobject[key];
