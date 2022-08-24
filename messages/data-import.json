@@ -4,5 +4,6 @@
     "allOrNoneFlagDescription": "any failed records in a call cause all changes for the call to be rolled back",
     "ignoreErrorsFlagDescription": "errors are displayed as warnings only and import will continue",
     "dataPlanFlagDescription": "path to data plan file",
+    "ignoreUnavailableFieldsFlagDescription": "ignore fields that don't exist on target org or fields you don't have access to",
     "verbose": "verbose output of import result"
 }
