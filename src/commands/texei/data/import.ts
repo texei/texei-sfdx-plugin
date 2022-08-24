@@ -327,47 +327,66 @@ export default class Import extends SfdxCommand {
         sobjectsResult.push(...chunkResults);
       }
     }
-    else if (records[0] && records[0].Id) {
-      // There is an Id, so it's an update
-      this.debug(`DEBUG updating ${sobjectName} records`);
-
-      // Checking if a batch size is specified
-      const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;  
-      for (var i = 0; i < records.length; i += batchSize) {
-        // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-        const chunkResults: RecordResult[] = await conn.sobject(sobjectName).update(records.slice(i, i + batchSize), { allowRecursive: true, allOrNone: this.flags.allornone })
-                                                        .catch(err => {
-                                                          if (this.flags.ignoreerrors) {
-                                                            this.ux.log(`Error importing records: ${err}`);
-                                                          }
-                                                          else {
-                                                            throw new SfdxError(`Error importing records: ${err}`);
-                                                          }
-                                                        });
-        sobjectsResult.push(...chunkResults);
-      }
-    }
     else {
-      // No Id, insert
-      this.debug(`DEBUG inserting ${sobjectName} records`);
+      if (records && records.length > 0) {
+        let recordsToInsert:Array<any> = new Array<any>();
+        let recordsToUpdate:Array<any> = new Array<any>();
+        for (const record of records) {
+          if (record.Id) {
+            // There is an Id, so it's an update
+            recordsToUpdate.push(record);
+          }
+          else {
+            // No Id, insert record
+            recordsToInsert.push(record);
+          }
+        }
 
-      // Checking if a batch size is specified
-      const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;  
-      for (var i = 0; i < records.length; i += batchSize) {
-        // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-        const chunkResults: RecordResult[] = await conn.sobject(sobjectName).insert(records.slice(i, i + batchSize), { allowRecursive: true, allOrNone: this.flags.allornone })
-                                                        .catch(err => {
-                                                          if (this.flags.ignoreerrors) {
-                                                            this.ux.log(`Error importing records: ${err}`);
-                                                          }
-                                                          else {
-                                                            throw new SfdxError(`Error importing records: ${err}`);
-                                                          }
-                                                        });
-        sobjectsResult.push(...chunkResults);
+        // UPDATING RECORDS
+        if (recordsToUpdate.length > 0) {
+          this.debug(`DEBUG updating ${sobjectName} records`);
+    
+          // Checking if a batch size is specified
+          const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;  
+          for (var i = 0; i < recordsToUpdate.length; i += batchSize) {
+            // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+            const chunkResults: RecordResult[] = await conn.sobject(sobjectName).update(recordsToUpdate.slice(i, i + batchSize), { allowRecursive: true, allOrNone: this.flags.allornone })
+                                                            .catch(err => {
+                                                              if (this.flags.ignoreerrors) {
+                                                                this.ux.log(`Error importing records: ${err}`);
+                                                              }
+                                                              else {
+                                                                throw new SfdxError(`Error importing records: ${err}`);
+                                                              }
+                                                            });
+            sobjectsResult.push(...chunkResults);
+          }
+        }
+
+        // INSERTING RECORDS
+        if (recordsToInsert.length > 0) {
+          // No Id, insert
+          this.debug(`DEBUG inserting ${sobjectName} records`);
+    
+          // Checking if a batch size is specified
+          const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;  
+          for (var i = 0; i < recordsToInsert.length; i += batchSize) {
+            // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+            const chunkResults: RecordResult[] = await conn.sobject(sobjectName).insert(recordsToInsert.slice(i, i + batchSize), { allowRecursive: true, allOrNone: this.flags.allornone })
+                                                            .catch(err => {
+                                                              if (this.flags.ignoreerrors) {
+                                                                this.ux.log(`Error importing records: ${err}`);
+                                                              }
+                                                              else {
+                                                                throw new SfdxError(`Error importing records: ${err}`);
+                                                              }
+                                                            });
+            sobjectsResult.push(...chunkResults);
+          }
+        }
       }
     }
-
+    
     // Some errors are part of RecordResult but don't throw an exception
     for (let i = 0; i < sobjectsResult.length; i++) {
       
