@@ -309,7 +309,7 @@ export default class Import extends SfdxCommand {
       this.debug(`DEBUG upserting ${sobjectName} records using external id field '${externalIdField}'`);
 
       records.forEach(record => {
-        record[externalIdField] = encodeURI(record[externalIdField]);
+        record[externalIdField] = encodeURIComponent(record[externalIdField]);
       });
       // max. parallel upsert requests as supported by jsforce (default)
       // https://github.com/jsforce/jsforce/blob/82fcc5284215e95047d0f735dd3037a1aeba5d88/lib/connection.js#L82
