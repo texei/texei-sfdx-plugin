@@ -1,0 +1,8 @@
+{
+    "commandDescription": "create a picklist metadata file from a csv file (apiname;label)",
+    "inputFlagDescription": "path to csv file",
+    "outputFlagDescription": "path where to save file",
+    "apiNameFlagDescription": "Field API Name",
+    "labelFlagDescription": "Field Label",
+    "typeFlagDescription": "Field Type"
+}
