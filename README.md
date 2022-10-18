@@ -82,7 +82,7 @@ _See code: [src/commands/texei/contractstatus/value/add.ts](https://github.com/t
 
 ## `sfdx texei:cpqsettings:set -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
-set CPQ Settings from file
+set CPQ Settings from file ([example](https://github.com/texei/texei-sfdx-plugin/blob/master/examples/cpqSettings.json))
 
 ```
 USAGE
