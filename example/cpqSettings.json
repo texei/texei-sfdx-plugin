@@ -1,0 +1,113 @@
+{
+  "Documents": {
+    "Document Folder": "User Personal Documents",
+    "Attachment Target": "Document Only",
+    "Hide Document Name": false,
+    "Post to Feed?": false,
+    "Full Page Preview": false,
+    "Enable Multi-Language Translations": false,
+    "Exclude Hidden Lines In Group Totals": false
+  },
+  "Groups": {
+    "Solution Groups Enabled": true,
+    "Require Group Name": true,
+    "Object": "SBQQ__SolutionGroup__c",
+    "Name Field": "Group Name",
+    "Description Field": "Description"
+  },
+  "Line Editor": {
+    "Hide Renewed Assets When Editing": false,
+    "Actions Column Placement": "Left",
+    "Visualize Product Hierarchy": true,
+    "Enable Multi Line Delete": true,
+    "Preserve Bundle Structure": true,
+    "Product Configuration Initializer": "",
+    "Keep Bundle Together": true,
+    "Enable Asset Upgrades": false,
+    "Totals Field": "Default",
+    "Group Subtotals Field": "Default",
+    "Line Subtotals Total Field": "Default",
+    "Wrap Buttons": true,
+    "Large Quote Threshold": "0",
+    "Validate Large Quotes": false,
+    "Quote Batch Size": "",
+    "Enable Compact Mode": false,
+    "Enable Expand/Collapse Bundles": false,
+    "Enable Large Quote Experience": true,
+    "Default Bundle Setting": "Expanded",
+    "Enable Column Resizing": false
+  },
+  "Plugins": {
+    "Legacy Page Security Plugin": "",
+    "Electronic Signature Plugin": "",
+    "Billing Plugin": "",
+    "Product Search Plugin": "",
+    "Recommended Products Plugin": "",
+    "Legacy Quote Calculator Plugin": "",
+    "Document Store Plugin": "",
+    "Quote Calculator Plugin": "",
+    "Order Management Plugin": "OrderPlugin",
+    "QLE Custom Action Plugin": ""
+  },
+  "Pricing and Calculation": {
+    "Currency Symbol": "",
+    "Use Inactive Prices": false,
+    "Unit Price Scale": "2",
+    "Calculate Immediately": false,
+    "Enable Quick Calculate": false,
+    "Disable Background Calculation Refresh": false,
+    "Allow Non-Consecutive Custom Segments": false,
+    "Enable Usage Based Pricing": false,
+    "Enable Pricing Guidance": false,
+    "Hide uncalculated quote warning": false,
+    "Quote Line Edits for Usage Based Pricing": false,
+    "Use Legacy Calculator": false
+  },
+  "Subscriptions and Renewals": {
+    "Renewal Model": "Contract Based",
+    "Disable Add Subscriptions": false,
+    "Allow Renewal Quotes Without Assets": false,
+    "Subscription Term Unit": "Month",
+    "Subscription Prorate Precision": "Proration Day of Month (Calendar Monthly + Daily)",
+    "Include Net-new Products in Maintenance": false,
+    "Contract In Foreground": false,
+    "Re-evaluate Bundle Logic on Renewals": false,
+    "PoT Renewals (Contracting from Orders)*": true,
+    "Legacy Amend/Renew Service": false,
+    "Amend Contracts in Background": false,
+    "Disable Product Bundle Sub Type Checks": false,
+    "Bypass Preserve Bundle Structure": false,
+    "Use Current Subscription on Assets": true
+  },
+  "Quote": {
+    "Disable Initial Quote Sync": false,
+    "Disable Quote Address Defaulting": false,
+    "Disable Quote Contact Defaulting": false,
+    "Primary Quote Keeps Opportunity Products": false,
+    "Allow Option Deletion": false,
+    "Default Quote Validity (Days)": "30"
+  },
+  "Order": {
+    "Require Approved Quote": false,
+    "Allow Multiple Orders": true,
+    "Default Order Start Date": "-- None --",
+    "Create Orders Without Opportunities": false
+  },
+  "Additional Settings": {
+    "Triggers Disabled": false,
+    "Product Results Group Field Name": "-- None --",
+    "Quantity Scale": "2",
+    "Product Description Field": "Product Description",
+    "Sort Products In Memory": false,
+    "Theme": "-- None --",
+    "Multiple Bundles View": "Classic",
+    "Use Global Header Permission": false,
+    "External Configurator URL": "",
+    "Service Region": "Europe",
+    "Third Party Configurator": false,
+    "Enable Product Option Drawer": false,
+    "Open Search Filter By Default": false,
+    "Enable Large Configurations": false,
+    "Improve Browser Performance": true
+  }
+}
