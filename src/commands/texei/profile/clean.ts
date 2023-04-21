@@ -96,7 +96,7 @@ export default class Clean extends SfdxCommand {
       // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
       var parser = new xml2js.Parser();
       const parseString = util.promisify(parser.parseString);
-      const profileJson = await parseString(data);
+      const profileJson = JSON.parse(JSON.stringify(await parseString(data)));
       
       // Removing unwanted nodes
       for (const nodeKey in profileJson.Profile) {

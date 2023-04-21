@@ -64,7 +64,7 @@ export default class Replace extends SfdxCommand {
     // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
     var parser = new xml2js.Parser();
     const parseString = util.promisify(parser.parseString);
-    const customLabelJson = await parseString(customLabelFile);
+    const customLabelJson = JSON.parse(JSON.stringify(await parseString(customLabelFile)));
     let labelUpdated = false;
 
     const labelIndex = customLabelJson.CustomLabels.labels.findIndex(label => label.fullName == this.flags.label);

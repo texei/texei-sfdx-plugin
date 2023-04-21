@@ -66,7 +66,7 @@ export default class Unrestrict extends SfdxCommand {
             // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
             var parser = new xml2js.Parser({ explicitArray: false });
             const parseString = util.promisify(parser.parseString);
-            const fieldJson = await parseString(fieldData);
+            const fieldJson = JSON.parse(JSON.stringify(await parseString(fieldData)));
             if ((fieldJson.CustomField.type === 'Picklist'
                 || fieldJson.CustomField.type === 'MultiselectPicklist')
                 && fieldJson.CustomField.valueSet?.valueSetName === undefined
