@@ -69,12 +69,12 @@ export default class Retrieve extends SfdxCommand {
         // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
         var parser = new xml2js.Parser();
         const parseString = util.promisify(parser.parseString);
-        const profileJson = await parseString(data);
+        const profileJson = JSON.parse(JSON.stringify(await parseString(data)));
         
         // Looking for unwanted nodes
         for (const [key, value] of Object.entries(profileJson.Profile)) {
           this.debug(`key: ${key} - value: ${value}`);
-
+          this.debug(key);
           if (profileJson.Profile.hasOwnProperty(key)) {
             if (nodesNotAllowed.includes(key)) {
               // Could definitely be improved
