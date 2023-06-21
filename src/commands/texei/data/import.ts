@@ -145,9 +145,9 @@ export default class Import extends SfdxCommand {
 
     // If object is PricebookEntry, look for standard price book
     let standardPriceBookId = '';
-    if (sobjectName === 'PricebookEntry') {
+   // if (sobjectName === 'PricebookEntry', ) {
       standardPriceBookId = ((await conn.query('Select Id from Pricebook2 where IsStandard = true')).records[0] as any).Id;
-    }
+   // }
     
     // Replace data to import with newly generated Record Type Ids
     for (const sobject of jsonData) {
@@ -170,7 +170,8 @@ export default class Import extends SfdxCommand {
       for (const lookup of lookups) {
 
         // Regular lookups
-        if (sobject[lookup.name] && !(sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook' && lookup.name === 'Pricebook2Id')) {
+        //if (sobject[lookup.name] && !(sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook' && lookup.name === 'Pricebook2Id')) 
+		 if(sobject[lookup.name] && !(sobject.Pricebook2Id === 'StandardPriceBook' && lookup.name === 'Pricebook2Id')) {
           sobject[lookup.name] = recordIdsMap.get(sobject[lookup.name]);
         }
 
@@ -288,7 +289,8 @@ export default class Import extends SfdxCommand {
       }
 
       // If object is PricebookEntry, use standard price book from target org
-      if (sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook') {
+      //if (sobjectName === 'PricebookEntry' && sobject.Pricebook2Id === 'StandardPriceBook') {
+	  if (sobject.Pricebook2Id === 'StandardPriceBook') {
         sobject.Pricebook2Id = standardPriceBookId;
       }
 
