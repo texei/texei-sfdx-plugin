@@ -1,5 +1,0 @@
-{
-  "commandDescription": "install dependent Packages for a sfdx project",
-  "invalidPackageName": "Invalid Package Name",
-  "invalidVersionNumber": "Invalid Version Number"
-}

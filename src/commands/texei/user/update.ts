@@ -1,45 +1,48 @@
-import { SfdxCommand, flags } from '@salesforce/command';
-import { Messages, SfdxError } from '@salesforce/core';
-var exec = require('child-process-promise').exec;
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  SfCommand,
+  Flags,
+  orgApiVersionFlagWithDeprecations,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
+import childProcess = require('child-process-promise');
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages('texei-sfdx-plugin', 'user-update');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'user.update');
 
-export default class Update extends SfdxCommand {
+export type UpdateResult = {
+  org: string;
+  message: string;
+};
 
-  public static description = messages.getMessage('commandDescription');
+export default class Update extends SfCommand<UpdateResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-    `sfdx texei:user:update --targetusername myOrg@example.com --values "LanguageLocaleKey='fr'" \nSuccessfully updated record: 005D2A90N8A11SVPE2.`,
-    `sfdx texei:user:update  --values "UserPermissionsKnowledgeUser=true" --json`,
-    `sfdx texei:user:update  --values "LanguageLocaleKey=en_US UserPermissionsMarketingUser=true" --json`
+  public static readonly examples = [
+    'sf texei user update --target-org myOrg@example.com --values "LanguageLocaleKey=\'fr\'" \nSuccessfully updated record: 005D2A90N8A11SVPE2.',
+    'sf texei user update  --values "UserPermissionsKnowledgeUser=true" --json',
+    'sf texei user update  --values "LanguageLocaleKey=en_US UserPermissionsMarketingUser=true" --json',
   ];
 
-  //public static args = [{ name: 'file' }];
-
-  protected static flagsConfig = {
-    values: flags.string({ char: 'v', description: messages.getMessage('valuesFlagDescription') })
+  public static readonly flags = {
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': orgApiVersionFlagWithDeprecations,
+    values: Flags.string({ char: 'v', summary: messages.getMessage('flags.values.summary') }),
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = true;
+  public async run(): Promise<UpdateResult> {
+    const { flags } = await this.parse(Update);
 
-  // Comment this out if your command does not support a hub org username
-  protected static supportsDevhubUsername = false;
-
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
-
-  public async run(): Promise<any> {
-
-    const values = this.flags.values;
+    const values = flags.values;
 
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
-    const userName = this.org.getUsername();
+    const userName = flags['target-org'].getUsername();
 
     // TODO: update to use jsforce ?
     // https://jsforce.github.io/document/#update
@@ -47,26 +50,24 @@ export default class Update extends SfdxCommand {
 
     let result = '';
     try {
-
-      const { stdout } = await exec(updateUserCommand);
+      const { stdout } = await childProcess.exec(updateUserCommand);
       result = stdout;
 
       // Remove line breaks from string
-      result = result.replace(/(\r\n\t|\n|\r\t)/gm,'');
+      result = result.replace(/(\r\n\t|\n|\r\t)/gm, '');
 
-      this.ux.log(result);
+      this.log(result);
     } catch (error) {
-
       result = error.stderr;
 
       // Remove line breaks from string
-      result = result.replace(/(\r\n\t|\n|\r\t)/gm,'');
+      result = result?.replace(/(\r\n\t|\n|\r\t)/gm, '');
 
       // Throw an error, sfdx library will manage the way to display it
-      throw new SfdxError(result);
+      throw new SfError(result);
     }
 
     // Everything went fine, return an object that will be used for --json
-    return { org: this.org.getOrgId(), message: result };
+    return { org: flags['target-org'].getOrgId(), message: result };
   }
 }

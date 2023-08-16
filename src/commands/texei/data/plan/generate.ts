@@ -1,8 +1,7 @@
-import { flags, SfdxCommand } from '@salesforce/command';
-import { Messages, SfdxError } from '@salesforce/core';
-import { AnyJson } from '@salesforce/ts-types';
-import * as fs from 'fs';
+import { promises as fs } from 'fs';
 import * as path from 'path';
+import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
 
 const dataPlanFilename = 'data-plan.json';
 
@@ -11,71 +10,58 @@ Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages('texei-sfdx-plugin', 'data-plan-generate');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'data.plan.generate');
 
-export default class Generate extends SfdxCommand {
+export type GenerateResult = {
+  message: string;
+};
 
-  public static description = messages.getMessage('commandDescription');
+export default class Generate extends SfCommand<GenerateResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-  `$ sfdx texei:data:plan:generate --objects Account,Contact,MyCustomObject__c --outputdir ./data`
+  public static readonly examples = [
+    '$ sf texei data plan generate --objects Account,Contact,MyCustomObject__c --outputdir ./data',
   ];
 
-  protected static flagsConfig = {
-    outputdir: flags.string({char: 'd', description: messages.getMessage('outputdirFlagDescription'), required: true}),
-    objects: flags.string({char: 'o', description: messages.getMessage('objectsFlagDescription'), required: true})
+  public static readonly flags = {
+    outputdir: Flags.string({ char: 'd', summary: messages.getMessage('flags.outputdir.summary'), required: true }),
+    objects: Flags.string({ char: 's', summary: messages.getMessage('flags.objects.summary'), required: true }),
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = false;
+  public async run(): Promise<GenerateResult> {
+    const { flags } = await this.parse(Generate);
 
-  // Comment this out if your command does not support a hub org username
-  protected static requiresDevhubUsername = false;
-
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
-
-  public async run(): Promise<AnyJson> {
-
-    let dataPlan: DataPlan = {
+    const dataPlan: DataPlan = {
       excludedFields: [],
       lookupOverride: {},
-      sObjects: []
+      sObjects: [],
     };
 
     // Read objects list from flag, mapping to data plan format
-    for (const objectName of this.flags.objects.split(',')) {
+    for (const objectName of flags.objects.split(',')) {
       dataPlan.sObjects.push({
-          name: objectName,
-          label: "",
-          filters: "",
-          orderBy: "",
-          externalId: "",
-          excludedFields: []
+        name: objectName,
+        label: '',
+        filters: '',
+        orderBy: '',
+        externalId: '',
+        excludedFields: [],
       });
     }
 
     // Save file
     let filePath = dataPlanFilename;
-    if (this.flags.outputdir) {
-      filePath = path.join(
-        this.flags.outputdir,
-        dataPlanFilename
-      );
+    if (flags.outputdir) {
+      filePath = path.join(flags.outputdir, dataPlanFilename);
     }
-    
-    const saveToPath = path.join(
-      process.cwd(),
-      filePath
-    );
 
-    await fs.writeFile(saveToPath, JSON.stringify(dataPlan, null, 2), 'utf8', function (err) {
-      if (err) {
-        throw new SfdxError(`Unable to write file at path ${saveToPath}: ${err}`);
-      }
+    const saveToPath = path.join(process.cwd(), filePath);
+
+    await fs.writeFile(saveToPath, JSON.stringify(dataPlan, null, 2), 'utf8').catch((err: string) => {
+      throw new SfError(`Unable to write file at path ${saveToPath}: ${err}`);
     });
 
-    this.ux.log(`Data plan generated.`);
+    this.log('Data plan generated.');
 
     return { message: 'Data plan generated' };
   }

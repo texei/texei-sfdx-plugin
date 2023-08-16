@@ -1,7 +1,0 @@
-{
-  "commandDescription": "export objects' data from org",
-  "objectsFlagDescription": "comma-separated list of objects to export",
-  "outputdirFlagDescription": "directory where to store files",
-  "dataPlanFlagDescription": "path to data plan file",
-  "apiTypeFlagDescription": "API Type to use"
-}

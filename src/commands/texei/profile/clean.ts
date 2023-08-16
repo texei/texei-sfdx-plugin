@@ -1,92 +1,89 @@
-import { flags, SfdxCommand } from '@salesforce/command';
-import { Messages, SfdxError } from '@salesforce/core';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable @typescript-eslint/await-thenable */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as fs from 'fs';
 import * as path from 'path';
-import { getDefaultPackagePath } from "../../../shared/sfdxProjectFolder";
-
-const util = require('util');
-const xml2js = require('xml2js');
+import util = require('util');
+import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
+import xml2js = require('xml2js');
+import { getDefaultPackagePath } from '../../../shared/sfdxProjectFolder';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages('texei-sfdx-plugin', 'profile-clean');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'profile.clean');
 
-export default class Clean extends SfdxCommand {
+export type ProfileCleanResult = {
+  profilesCleaned: string[];
+};
 
-  public static description = messages.getMessage('commandDescription');
+export default class Clean extends SfCommand<ProfileCleanResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-    '$ texei:profile:clean -k layoutAssignments,recordTypeVisibilities',
-    '$ texei:profile:clean -p custom-sfdx-source-folder/main/profiles',
-    '$ texei:profile:clean -p custom-sfdx-source-folder/main/profiles,source-folder-2/main/profiles/myAdmin.profile-meta.xml'
+  public static readonly examples = [
+    '$ sf texei profile clean -k layoutAssignments,recordTypeVisibilities',
+    '$ sf texei profile clean -p custom-sfdx-source-folder/main/profiles',
+    '$ sf texei profile clean -p custom-sfdx-source-folder/main/profiles,source-folder-2/main/profiles/myAdmin.profile-meta.xml',
   ];
 
-  protected static flagsConfig = {
-    keep: flags.string({ char: 'k', required: false, description: 'comma-separated list of profile node permissions that need to be kept. Default: layoutAssignments,loginHours,loginIpRanges,custom,userLicense' }),
-    path: flags.string({ char: 'p', required: false, description: 'comma-separated list of profiles, or path to profiles folder. Default: default package directory' })
+  public static readonly flags = {
+    keep: Flags.string({ char: 'k', summary: messages.getMessage('flags.keep.summary'), required: false }),
+    path: Flags.string({ char: 'p', summary: messages.getMessage('flags.path.summary'), required: false }),
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = false;
+  public async run(): Promise<ProfileCleanResult> {
+    const { flags } = await this.parse(Clean);
 
-  // Comment this out if your command does not require a hub org username
-  protected static requiresDevhubUsername = false;
-
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
-
-  public async run(): Promise<any> {
-
-    let cleanResult = [];
+    const cleanResult = [];
 
     // TODO: Keep default recordTypeVisibilities & applicationVisibilities like in skinnyprofile:retrieve
-    const defaultKeep = ['layoutAssignments','loginHours','loginIpRanges','custom','userLicense'];
-    const nodesToKeep = this.flags.keep ? this.flags.keep : defaultKeep;
+    const defaultKeep = ['layoutAssignments', 'loginHours', 'loginIpRanges', 'custom', 'userLicense'];
+    const nodesToKeep = flags.keep ? flags.keep : defaultKeep;
     let profilesToClean = [];
 
     // Get profiles files path
-    if (this.flags.path) {
-
+    if (flags.path) {
       // If path was provided as a flag use it/them
-      const paths = this.flags.path.split(',');
+      const paths = flags.path.split(',');
 
       for (const currentPath of paths) {
-
         if (currentPath.endsWith('.profile-meta.xml')) {
           // Well, this should be a profile
           // Otherwise you have a weird folder naming convention, you should probably stop this
+          // @ts-ignore: TODO: working code, but look at TS warning
           profilesToClean.push(currentPath);
-        }
-        else {
+        } else {
           // Flag provided value doesn't end like a Profile source metadata
           // Expect it's a folder
           profilesToClean = await this.getProfilesInPath(currentPath);
         }
       }
-    }
-    else {
+    } else {
       // Else look in the default package directory
       const defaultPackageDirectory = path.join(await getDefaultPackagePath(), 'profiles');
       profilesToClean = await this.getProfilesInPath(defaultPackageDirectory);
     }
 
+    // eslint-disable-next-line eqeqeq
     if (profilesToClean.length == 0) {
-      this.ux.log('No Profile found :(');
+      this.log('No Profile found :(');
     }
 
     // Promisify functions
     const readFile = util.promisify(fs.readFile);
-    
-    for (const profilePath of profilesToClean) {
 
+    for (const profilePath of profilesToClean) {
       // Generate path
-      const filePath = path.join(
-        process.cwd(),
-        profilePath
-      );
+      const filePath = path.join(process.cwd(), profilePath);
 
       // Read data file
       const data = await readFile(filePath, 'utf8');
@@ -94,12 +91,15 @@ export default class Clean extends SfdxCommand {
       // Parsing file
       // According to xml2js doc it's better to recreate a parser for each file
       // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
-      var parser = new xml2js.Parser();
+      const parser = new xml2js.Parser();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       const parseString = util.promisify(parser.parseString);
-      const profileJson = await parseString(data);
-      
+      // @ts-ignore: TODO: working code, but look at TS warning
+      const profileJson = JSON.parse(JSON.stringify(await parseString(data)));
+
       // Removing unwanted nodes
       for (const nodeKey in profileJson.Profile) {
+        // eslint-disable-next-line no-prototype-builtins
         if (profileJson.Profile.hasOwnProperty(nodeKey)) {
           if (!nodesToKeep.includes(nodeKey)) {
             delete profileJson.Profile[nodeKey];
@@ -109,16 +109,17 @@ export default class Clean extends SfdxCommand {
 
       // Building back as an xml
       const builder = new xml2js.Builder();
-      var xmlFile = builder.buildObject(profileJson);
+      const xmlFile = builder.buildObject(profileJson);
 
       // Writing back to file
+      // eslint-disable-next-line prefer-arrow-callback
       await fs.writeFile(filePath, xmlFile, 'utf8', function (err) {
         if (err) {
-          throw new SfdxError(`Unable to write Profile file at path ${filePath}: ${err}`);
+          throw new SfError(`Unable to write Profile file at path ${filePath}: ${err}`);
         }
       });
 
-      this.ux.log(`Profile cleaned: ${profilePath}`);
+      this.log(`Profile cleaned: ${profilePath}`);
       cleanResult.push(profilePath);
     }
 
@@ -126,31 +127,23 @@ export default class Clean extends SfdxCommand {
   }
 
   private async getProfilesInPath(pathToRead: string) {
-    let profilesInPath = [];
+    const profilesInPath = [];
 
     const readDirectory = util.promisify(fs.readdir);
     const filesInDir = await readDirectory(pathToRead);
 
     for (const fileInDir of filesInDir) {
-
-      const dirOrFilePath = path.join(
-        process.cwd(),
-        pathToRead,
-        fileInDir
-      );
+      const dirOrFilePath = path.join(process.cwd(), pathToRead, fileInDir);
 
       // If it's a Profile file, add it
       if (!fs.lstatSync(dirOrFilePath).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
+        const profileFoundPath = path.join(pathToRead, fileInDir);
 
-        const profileFoundPath = path.join(
-          pathToRead,
-          fileInDir
-        );
-
+        // @ts-ignore: TODO: working code, but look at TS warning
         profilesInPath.push(profileFoundPath);
       }
     }
-    
+
     return profilesInPath;
   }
 }

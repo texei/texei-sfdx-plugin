@@ -1,61 +1,65 @@
-import { flags, SfdxCommand } from '@salesforce/command';
-import { Messages, SfdxError } from '@salesforce/core';
-import { AnyJson } from '@salesforce/ts-types';
-import * as fs from "fs";
-import * as path from "path";
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import * as fs from 'fs';
+import * as path from 'path';
+import {
+  SfCommand,
+  Flags,
+  orgApiVersionFlagWithDeprecations,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages('texei-sfdx-plugin', 'picklist-restrict');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'picklist.restrict');
 
-export default class Restrict extends SfdxCommand {
+export type PicklistRestrictResult = {
+  result: string[];
+  picklists: string[];
+};
 
-  public static description = messages.getMessage('commandDescription');
+export default class Restrict extends SfCommand<PicklistRestrictResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-    `$ sfdx texei:picklist:restrict -d my-unrestricted-picklists.json`
-  ];
+  public static readonly examples = ['$ sf texei picklist restrict -d my-unrestricted-picklists.json'];
 
-  protected static flagsConfig = {
-    inputdir: flags.string({
-      char: "d",
-      description: messages.getMessage("inputFlagDescription"),
-      required: true
+  public static readonly requiresProject = true;
+
+  public static readonly flags = {
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': orgApiVersionFlagWithDeprecations,
+    inputdir: Flags.string({ char: 'd', summary: messages.getMessage('flags.inputdir.summary'), required: true }),
+    ignoreerrors: Flags.string({
+      char: 'e',
+      summary: messages.getMessage('flags.ignoreerrors.summary'),
+      required: true,
     }),
-    ignoreerrors: flags.boolean({
-      char: "o",
-      description: messages.getMessage("ignoreErrorsFlagDescription"),
-      required: false
-    })
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = true;
+  public async run(): Promise<PicklistRestrictResult> {
+    const { flags } = await this.parse(Restrict);
 
-  // Comment this out if your command does not support a hub org username
-  protected static requiresDevhubUsername = false;
+    const conn = flags['target-org'].getConnection(flags['api-version']);
 
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
-
-  public async run(): Promise<AnyJson> {
-
-    const conn = this.org.getConnection();
-
-    const filePath = path.join(process.cwd(), this.flags.inputdir);
+    const filePath = path.join(process.cwd(), flags.inputdir);
     const fileData = JSON.parse(await fs.promises.readFile(filePath, 'utf8'));
 
     const picklistMetadata = fileData?.result?.picklists;
 
-    let metadataUpdateResults = [];
+    const metadataUpdateResults = [];
     const picklistUpdateSuccess = [];
     const picklistUpdateErrors = [];
 
     if (picklistMetadata && picklistMetadata.length > 0) {
-
       // Set back restricted value
       for (const picklist of picklistMetadata) {
         picklist.valueSet.restricted = true;
@@ -63,36 +67,46 @@ export default class Restrict extends SfdxCommand {
 
       // EXCEEDED_ID_LIMIT: record limit reached. cannot submit more than 10 records in this operation
       const maxParallelUpsertRequests = 10;
-      
+
       for (let i = 0; i < picklistMetadata.length; i += maxParallelUpsertRequests) {
-        const chunkResults: any = await conn.metadata.update('CustomField', picklistMetadata.slice(i, i + maxParallelUpsertRequests));
+        const chunkResults: any = await conn.metadata.update(
+          'CustomField',
+          picklistMetadata.slice(i, i + maxParallelUpsertRequests)
+        );
+        // @ts-ignore: TODO: working code, but look at TS warning
         metadataUpdateResults.push(...chunkResults);
       }
 
       // Handle results
       for (const metadataRes of metadataUpdateResults) {
+        // @ts-ignore: TODO: working code, but look at TS warning
         if (metadataRes.success === true) {
+          // @ts-ignore: TODO: working code, but look at TS warning
           picklistUpdateSuccess.push(metadataRes.fullName);
-        }
-        else {
-          picklistUpdateErrors.push(`${metadataRes.fullName}: ${metadataRes.errors?.statusCode} - ${metadataRes.errors?.message}`);
+        } else {
+          picklistUpdateErrors.push(
+            // @ts-ignore: TODO: working code, but look at TS warning
+            `${metadataRes.fullName}: ${metadataRes.errors?.statusCode} - ${metadataRes.errors?.message}`
+          );
         }
       }
     }
 
     if (picklistUpdateSuccess.length > 0) {
-      this.ux.log('Picklist successfully restricted:');
+      this.log('Picklist successfully restricted:');
       for (const picklist of picklistUpdateSuccess) {
-        this.ux.log(picklist);
+        this.log(picklist);
       }
     }
     if (picklistUpdateErrors.length > 0) {
-      this.ux.log(`\n/!\\ Picklist restricted failed:`);
+      this.log('\n/!\\ Picklist restricted failed:');
       for (const picklist of picklistUpdateErrors) {
-        this.ux.log(picklist);
+        this.log(picklist);
       }
-      if (!this.flags.ignoreerrors) {
-        throw new SfdxError(`Unable to restrict all picklists: ${picklistUpdateErrors}. You may need to rollback the updated metadata ${picklistUpdateSuccess}`);
+      if (!flags.ignoreerrors) {
+        throw new SfError(
+          `Unable to restrict all picklists: ${picklistUpdateErrors}. You may need to rollback the updated metadata ${picklistUpdateSuccess}`
+        );
       }
     }
 
