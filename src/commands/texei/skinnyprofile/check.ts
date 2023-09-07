@@ -64,7 +64,10 @@ export default class Check extends SfCommand<CheckResult> {
 
         // Looking for unwanted nodes
         for (const [key, value] of Object.entries(profileJson?.Profile)) {
-          this.debug(`key: ${key} - value: ${value}`);
+          this.debug('key:');
+          this.debug(key);
+          this.debug('value:');
+          this.debug(value);
 
           if (Object.prototype.hasOwnProperty.call(profileJson.Profile, key)) {
             if (nodesNotAllowed.includes(key)) {
@@ -95,7 +98,7 @@ export default class Check extends SfCommand<CheckResult> {
   }
 
   private getProfilesInPath(pathToRead: string): string[] {
-    this.log(`getProfilesInPath --> pathToRead:${pathToRead}`);
+    this.debug(`getProfilesInPath --> pathToRead:${pathToRead}`);
 
     const profilesInPath: string[] = [];
 
