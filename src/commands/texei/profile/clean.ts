@@ -10,7 +10,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import util = require('util');
-import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
 import { getDefaultPackagePath } from '../../../shared/sfdxProjectFolder';
@@ -38,6 +38,8 @@ export default class Clean extends SfCommand<ProfileCleanResult> {
   public static readonly flags = {
     keep: Flags.string({ char: 'k', summary: messages.getMessage('flags.keep.summary'), required: false }),
     path: Flags.string({ char: 'p', summary: messages.getMessage('flags.path.summary'), required: false }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<ProfileCleanResult> {

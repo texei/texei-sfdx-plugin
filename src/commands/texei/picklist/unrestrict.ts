@@ -13,6 +13,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
@@ -46,6 +47,8 @@ export default class Unrestrict extends SfCommand<PicklistUnrestrictResult> {
       summary: messages.getMessage('flags.ignoreerrors.summary'),
       required: true,
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<PicklistUnrestrictResult> {

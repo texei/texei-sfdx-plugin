@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import xml2js = require('xml2js');
-import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { nodesNotAllowed } from '../../../shared/skinnyProfileHelper';
 import { getDefaultPackagePath } from '../../../shared/sfdxProjectFolder';
@@ -25,6 +25,8 @@ export default class Check extends SfCommand<CheckResult> {
   // TODO: add path for project files
   public static readonly flags = {
     path: Flags.string({ char: 'p', required: false, summary: messages.getMessage('flags.path.summary') }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default

@@ -7,7 +7,7 @@
 /* eslint-disable no-await-in-loop */
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import xml2js = require('xml2js');
@@ -42,6 +42,8 @@ export default class Create extends SfCommand<PicklistCreateResult> {
       default: 'Picklist',
       required: false,
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<PicklistCreateResult> {

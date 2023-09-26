@@ -14,6 +14,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
@@ -36,6 +37,8 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     'target-org': requiredOrgFlagWithDeprecations,
     'api-version': orgApiVersionFlagWithDeprecations,
     inputfile: Flags.string({ char: 'f', summary: messages.getMessage('flags.inputfile.summary'), required: true }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<CpqSettingsSetResult> {

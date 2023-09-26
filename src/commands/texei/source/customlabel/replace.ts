@@ -6,7 +6,7 @@
 import * as path from 'path';
 import util = require('util');
 import * as fs from 'fs';
-import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
 
@@ -37,6 +37,8 @@ export default class Replace extends SfCommand<SourceCustomlabelReplaceResult> {
     path: Flags.string({ char: 'p', summary: messages.getMessage('flags.path.summary'), required: false }),
     label: Flags.string({ char: 'l', summary: messages.getMessage('flags.label.summary'), required: true }),
     value: Flags.string({ char: 'v', summary: messages.getMessage('flags.value.summary'), required: true }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<SourceCustomlabelReplaceResult> {

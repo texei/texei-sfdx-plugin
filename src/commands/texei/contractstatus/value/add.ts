@@ -8,6 +8,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { StandardValueSetHelper } from '../../../../shared/standardValueSetHelper';
@@ -42,6 +43,8 @@ export default class Add extends SfCommand<ContractStatusValueAddResult> {
       default: 'Draft',
       required: false,
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<ContractStatusValueAddResult> {

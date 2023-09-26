@@ -8,6 +8,7 @@ import {
   SfCommand,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
@@ -31,6 +32,8 @@ export default class Enable extends SfCommand<SharedactivitiesEnableResult> {
   public static readonly flags = {
     'target-org': requiredOrgFlagWithDeprecations,
     'api-version': orgApiVersionFlagWithDeprecations,
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<SharedactivitiesEnableResult> {

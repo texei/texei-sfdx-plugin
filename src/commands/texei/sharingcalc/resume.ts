@@ -10,6 +10,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
@@ -51,6 +52,8 @@ export default class Resume extends SfCommand<SharingcalcResumeResult> {
       required: false,
       default: 120000,
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   private timeoutHandler = null;

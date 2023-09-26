@@ -12,6 +12,7 @@ import {
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
   requiredHubFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { SaveResult } from 'jsforce';
@@ -44,6 +45,8 @@ export default class CleanOrg extends SfCommand<SourceLayoutsCleanorgResult> {
     'target-dev-hub': requiredHubFlagWithDeprecations,
     'api-version': orgApiVersionFlagWithDeprecations,
     path: Flags.string({ char: 'p', summary: messages.getMessage('flags.path.summary'), required: false }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<SourceLayoutsCleanorgResult> {

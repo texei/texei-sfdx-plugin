@@ -20,6 +20,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError, Connection } from '@salesforce/core';
 // @ts-ignore: TODO: Looks like types for RecordResult, SuccessResult, ErrorResult, ExecuteOptions are not exported
@@ -91,6 +92,8 @@ export default class Import extends SfCommand<ImportResult> {
     verbose: Flags.boolean({
       summary: messages.getMessage('flags.verbose.summary'),
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<ImportResult> {

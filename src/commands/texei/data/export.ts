@@ -20,6 +20,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError, Connection } from '@salesforce/core';
 import { Record } from 'jsforce';
@@ -61,6 +62,8 @@ export default class Export extends SfCommand<ExportResult> {
       options: ['rest', 'bulk'],
       default: 'rest',
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<ExportResult> {

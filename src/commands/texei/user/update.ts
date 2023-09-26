@@ -5,6 +5,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import childProcess = require('child-process-promise');
@@ -34,6 +35,8 @@ export default class Update extends SfCommand<UpdateResult> {
     'target-org': requiredOrgFlagWithDeprecations,
     'api-version': orgApiVersionFlagWithDeprecations,
     values: Flags.string({ char: 'v', summary: messages.getMessage('flags.values.summary') }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<UpdateResult> {

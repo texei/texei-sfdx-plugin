@@ -15,6 +15,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages, Connection, SfError } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
@@ -53,6 +54,8 @@ export default class Retrieve extends SfCommand<RetrieveResult> {
     'target-org': requiredOrgFlagWithDeprecations,
     'api-version': orgApiVersionFlagWithDeprecations,
     timeout: Flags.integer({ char: 't', required: false, summary: messages.getMessage('flags.timeout.summary') }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default

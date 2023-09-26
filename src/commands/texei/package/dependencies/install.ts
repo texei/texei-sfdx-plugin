@@ -16,6 +16,7 @@ import {
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
   requiredHubFlagWithDeprecations,
+  loglevel,
 } from '@salesforce/sf-plugins-core';
 import { JsonArray, JsonMap } from '@salesforce/ts-types';
 import { Messages, SfProjectJson, SfError } from '@salesforce/core';
@@ -70,6 +71,8 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
       summary: messages.getMessage('flags.apexcompile.summary'),
       required: false,
     }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
   public async run(): Promise<PackageDependenciesInstallResult> {
