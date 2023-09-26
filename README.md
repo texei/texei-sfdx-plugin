@@ -14,17 +14,17 @@ Texeï's plugin for sfdx
 
 ### Install as plugin
 
-Install plugin: sf plugins install texei-sfdx-plugin
+Install plugin: `sf plugins install texei-sfdx-plugin`
 
 ### Install from source
 
 Install the SF CLI.
 
-Clone the repository: git clone https://github.com/texei/texei-sfdx-plugin.git
+Clone the repository: `git clone https://github.com/texei/texei-sfdx-plugin.git`
 
-Install npm modules: npm install
+Install npm modules: `npm install`
 
-Link the plugin: sf plugins link ./
+Link the plugin: `sf plugins link ./`
 
 ## Documentation
 
