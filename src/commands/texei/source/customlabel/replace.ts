@@ -1,10 +1,14 @@
-import { flags, SfdxCommand } from '@salesforce/command';
-import { Messages, SfdxError } from '@salesforce/core';
-import * as fs from 'fs';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as path from 'path';
-
-const util = require('util');
-const xml2js = require('xml2js');
+import util = require('util');
+import * as fs from 'fs';
+import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
+import xml2js = require('xml2js');
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -14,47 +18,42 @@ const customLabelsFileName = 'CustomLabels.labels-meta.xml';
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages('texei-sfdx-plugin', 'source-customlabel-replace');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'source.customlabel.replace');
 
-export default class Replace extends SfdxCommand {
+export type SourceCustomlabelReplaceResult = {
+  updatelabels: string[];
+};
 
-  public static description = messages.getMessage('commandDescription');
+export default class Replace extends SfCommand<SourceCustomlabelReplaceResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-    '$ texei:source:customlabel:replace --label GreatSalesforceBlog --value https://blog.texei.com'
+  public static readonly examples = [
+    '$ sf texei source customlabel replace --label GreatSalesforceBlog --value https://blog.texei.com',
   ];
 
-  protected static flagsConfig = {
-    path: flags.string({ char: 'p', required: false, description: `path to custom label` }),
-    label: flags.string({ char: 'l', required: true, description: `custom label to replace` }),
-    value: flags.string({ char: 'v', required: true, description: `new custom label` }),
+  public static readonly requiresProject = true;
+
+  public static readonly flags = {
+    path: Flags.string({ char: 'p', summary: messages.getMessage('flags.path.summary'), required: false }),
+    label: Flags.string({ char: 'l', summary: messages.getMessage('flags.label.summary'), required: true }),
+    value: Flags.string({ char: 'v', summary: messages.getMessage('flags.value.summary'), required: true }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = false;
+  public async run(): Promise<SourceCustomlabelReplaceResult> {
+    const { flags } = await this.parse(Replace);
 
-  // Comment this out if your command does not require a hub org username
-  protected static requiresDevhubUsername = false;
-
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = true;
-
-  public async run(): Promise<any> {
-
-    let updatedCustomLabels = [];
+    const updatedCustomLabels = [];
 
     // Promisify functions
     const readFile = util.promisify(fs.readFile);
     const writeFile = util.promisify(fs.writeFile);
 
     // Read files in directory
-    const pathToFile = this.flags.path ? this.flags.path : defaultCustomLabelsFolder;
+    const pathToFile = flags.path ? flags.path : defaultCustomLabelsFolder;
 
-    const filePath = path.join(
-        process.cwd(),
-        pathToFile,
-        customLabelsFileName
-    );
+    const filePath = path.join(process.cwd(), pathToFile, customLabelsFileName);
 
     // Read file
     const customLabelFile = await readFile(filePath, 'utf8');
@@ -62,33 +61,36 @@ export default class Replace extends SfdxCommand {
     // Parsing file
     // According to xml2js doc it's better to recreate a parser for each file
     // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
-    var parser = new xml2js.Parser();
+    const parser = new xml2js.Parser();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const parseString = util.promisify(parser.parseString);
+    // @ts-ignore: TODO: working code, but look at TS warning
     const customLabelJson = JSON.parse(JSON.stringify(await parseString(customLabelFile)));
     let labelUpdated = false;
 
-    const labelIndex = customLabelJson.CustomLabels.labels.findIndex(label => label.fullName == this.flags.label);
+    // eslint-disable-next-line eqeqeq
+    const labelIndex = customLabelJson.CustomLabels.labels.findIndex((label) => label.fullName == flags.label);
 
+    // eslint-disable-next-line eqeqeq
     if (labelIndex != -1) {
-        customLabelJson.CustomLabels.labels[labelIndex].value = this.flags.value;
-        labelUpdated = true;
-    }
-    else {
-        throw new SfdxError(`Custom Label ${this.flags.label} not found.`);
+      customLabelJson.CustomLabels.labels[labelIndex].value = flags.value;
+      labelUpdated = true;
+    } else {
+      throw new SfError(`Custom Label ${flags.label} not found.`);
     }
 
     // If a label was updated, save the file
     if (labelUpdated) {
-        
-        // Building back as an xml
-        const builder = new xml2js.Builder();
-        var xmlFile = builder.buildObject(customLabelJson);
-        
-        // Writing back to file
-        await writeFile(filePath, xmlFile, 'utf8');
+      // Building back as an xml
+      const builder = new xml2js.Builder();
+      const xmlFile = builder.buildObject(customLabelJson);
 
-        updatedCustomLabels.push(this.flags.label);
-        this.ux.log(`Custom Label ${this.flags.label} has been replaced with value ${this.flags.value}`);
+      // Writing back to file
+      await writeFile(filePath, xmlFile, 'utf8');
+
+      // @ts-ignore: TODO: working code, but look at TS warning
+      updatedCustomLabels.push(flags.label);
+      this.log(`Custom Label ${flags.label} has been replaced with value ${flags.value}`);
     }
 
     return { updatelabels: updatedCustomLabels };

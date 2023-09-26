@@ -1,51 +1,69 @@
-import { flags, SfdxCommand } from "@salesforce/command";
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  SfCommand,
+  Flags,
+  orgApiVersionFlagWithDeprecations,
+  requiredOrgFlagWithDeprecations,
+  loglevel,
+} from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
-import { StandardValueSetHelper } from "../../../../shared/standardValueSetHelper";
+import { StandardValueSetHelper } from '../../../../shared/standardValueSetHelper';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages(
-  "texei-sfdx-plugin",
-  "contractstatus-value-add"
-);
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'contractstatus.value.add');
 
-export default class Add extends SfdxCommand {
-  public static description = messages.getMessage("commandDescription");
+export type ContractStatusValueAddResult = {
+  message: string;
+};
 
-  public static examples = [
-    `sfdx texei:contractstatus:value:add --label 'My New Contract Status Label' --apiname 'My New Contract Status API Name' --targetusername texei`,
+export default class Add extends SfCommand<ContractStatusValueAddResult> {
+  public static readonly summary = messages.getMessage('summary');
+
+  public static readonly examples = [
+    "sf texei contractstatus value add --label 'My New Contract Status Label' --apiname 'My New Contract Status API Name' --target-org texei",
   ];
 
-  protected static flagsConfig = {
-    label: flags.string({char: 'l', description: messages.getMessage('labelFlagDescription'), required: true}),
-    apiname: flags.string({char: 'a', description: messages.getMessage('apiNameFlagDescription'), required: true}),
-    statuscategory: flags.string({char: 's', description: messages.getMessage('statusCategoryFlagDescription'), options: ['Draft','Activated','InApprovalProcess'], default: 'Draft', required: false})
+  public static readonly flags = {
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': orgApiVersionFlagWithDeprecations,
+    label: Flags.string({ char: 'l', summary: messages.getMessage('flags.label.summary'), required: true }),
+    apiname: Flags.string({ char: 'a', summary: messages.getMessage('flags.apiname.summary'), required: true }),
+    statuscategory: Flags.string({
+      char: 's',
+      summary: messages.getMessage('flags.statuscategory.summary'),
+      options: ['Draft', 'Activated', 'InApprovalProcess'],
+      default: 'Draft',
+      required: false,
+    }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = true;
+  public async run(): Promise<ContractStatusValueAddResult> {
+    const { flags } = await this.parse(Add);
 
-  // Comment this out if your command does not support a hub org username
-  protected static requiresDevhubUsername = false;
+    this.warn(
+      'ContractStatus StandardValueSet is now supported, you should move to the Metadata API instead of using this command.'
+    );
 
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
+    this.spinner.start(`Adding ContractStatus value (${flags.label}/${flags.apiname})`, undefined, { stdout: true });
 
-  public async run(): Promise<any> {
+    const connection = flags['target-org'].getConnection(flags['api-version']);
 
-    this.ux.warn('ContractStatus StandardValueSet is now supported, you should move to the Metadata API instead of using this command.');
-    
-    this.ux.startSpinner(`Adding ContractStatus value (${this.flags.label}/${this.flags.apiname})`, null, { stdout: true });
-
-    const svsh = new StandardValueSetHelper(this.org.getConnection(), 'ContractStatus');
-    await svsh.addValue(this.flags.label, this.flags.apiname, this.flags.statuscategory);
+    const svsh = new StandardValueSetHelper(connection, 'ContractStatus');
+    await svsh.addValue(flags.label, flags.apiname, flags.statuscategory);
     await svsh.close();
 
-    this.ux.stopSpinner('Done.');
+    this.spinner.stop('Done.');
 
-    return { message: `ContractStatus value added` };
+    return { message: 'ContractStatus value added' };
   }
 }

@@ -1,87 +1,93 @@
-import { SfdxCommand } from "@salesforce/command";
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/restrict-plus-operands */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import {
+  SfCommand,
+  orgApiVersionFlagWithDeprecations,
+  requiredOrgFlagWithDeprecations,
+  loglevel,
+} from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
-import * as puppeteer from "puppeteer";
+import * as puppeteer from 'puppeteer';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages(
-  "texei-sfdx-plugin",
-  "sharedactivities-enable"
-);
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'sharedactivities.enable');
 
-export default class Enable extends SfdxCommand {
-  public static description = messages.getMessage("commandDescription");
+export type SharedactivitiesEnableResult = {
+  message: string;
+};
 
-  public static examples = [
-    `$ sfdx texei:sharedactivities:enable`
-  ];
+export default class Enable extends SfCommand<SharedactivitiesEnableResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static flagsConfig = {};
+  public static readonly examples = ['$ sf texei sharedactivities enable'];
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = true;
+  public static readonly flags = {
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': orgApiVersionFlagWithDeprecations,
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
+  };
 
-  // Comment this out if your command does not support a hub org username
-  protected static requiresDevhubUsername = false;
+  public async run(): Promise<SharedactivitiesEnableResult> {
+    const { flags } = await this.parse(Enable);
 
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
+    this.warn(
+      'SharedActivities are now officially supported, you should add the SharedActivities feature to your scratch definition file instead of using this command.'
+    );
 
-  public async run(): Promise<any> {
-    let result = {};
+    const instanceUrl = flags['target-org'].getConnection(flags['api-version']).instanceUrl;
+    const accessToken = flags['target-org'].getConnection(flags['api-version']).accessToken;
 
-    this.ux.warn('SharedActivities are now officially supported, you should add the SharedActivities feature to your scratch definition file instead of using this command.');
+    await this.enableSharedActivities(instanceUrl, accessToken);
 
-    await this.enableSharedActivities();
-
-    return result;
+    return {
+      message:
+        'SharedActivities enabled. SharedActivities are now officially supported, you should add the SharedActivities feature to your scratch definition file instead of using this command.',
+    };
   }
 
-  private async enableSharedActivities() {
-    const instanceUrl = this.org.getConnection().instanceUrl;
-    const ACTIVITIES_SETTINGS_PATH = "/setup/activitiesSetupPage.apexp";
+  private async enableSharedActivities(instanceUrl: string, accessToken) {
+    const ACTIVITIES_SETTINGS_PATH = '/setup/activitiesSetupPage.apexp';
 
-    this.ux.startSpinner(`Enabling Shared Activities`, null, { stdout: true });
-    this.debug(`DEBUG Login to Org`);
+    this.spinner.start('Enabling Shared Activities', undefined, { stdout: true });
+    this.debug('DEBUG Login to Org');
 
     const browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: !(process.env.BROWSER_DEBUG === "true")
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: !(process.env.BROWSER_DEBUG === 'true'),
     });
     const page = await browser.newPage();
-    await page.goto(
-      `${instanceUrl}/secur/frontdoor.jsp?sid=${
-        this.org.getConnection().accessToken
-      }`,
-      { waitUntil: ["domcontentloaded", "networkidle0"] }
-    );
+    await page.goto(`${instanceUrl}/secur/frontdoor.jsp?sid=${accessToken}`, {
+      waitUntil: ['domcontentloaded', 'networkidle0'],
+    });
 
     const navigationPromise = page.waitForNavigation();
 
-    this.debug(`DEBUG Opening Activity Settings page`);
+    this.debug('DEBUG Opening Activity Settings page');
     await page.goto(`${instanceUrl + ACTIVITIES_SETTINGS_PATH}`);
     await navigationPromise;
 
-    this.debug(`DEBUG Clicking 'Allow Users to Relate Multiple Contacts to Tasks and Events' checkbox`);
-    await page.click(
-        'input[id="thePage:theForm:theBlock:manyWhoPref"]'
-    );
+    this.debug("DEBUG Clicking 'Allow Users to Relate Multiple Contacts to Tasks and Events' checkbox");
+    await page.click('input[id="thePage:theForm:theBlock:manyWhoPref"]');
 
-    this.debug(`DEBUG Clicking 'Submit' button`);
-    await page.click(
-        'input[id="thePage:theForm:theBlock:buttons:submit"]'
-    );
+    this.debug("DEBUG Clicking 'Submit' button");
+    await page.click('input[id="thePage:theForm:theBlock:buttons:submit"]');
     await navigationPromise;
 
-    this.debug(`DEBUG Closing browser`);
+    this.debug('DEBUG Closing browser');
 
     await browser.close();
 
-    this.ux.stopSpinner("Done.");
+    this.spinner.stop('Done.');
 
-    return { message: `Enabled Shared Activities` };
+    return { message: 'Enabled Shared Activities' };
   }
 }

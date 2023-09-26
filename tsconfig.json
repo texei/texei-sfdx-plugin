@@ -1,18 +1,10 @@
 {
+  "extends": "@salesforce/dev-config/tsconfig",
   "compilerOptions": {
-    "moduleResolution": "node",
-    "module": "commonjs",
-    "target": "es2019",
-    "lib": ["es2019", "dom"],
-    "alwaysStrict": true,
-    "noUnusedLocals": true,
-    "sourceMap": true,
-    "declaration": true,
-    "outDir": "./lib",
-    "importHelpers": true,
-    "resolveJsonModule": true,
-    "downlevelIteration": true,
-    "types": ["node"]
+    "outDir": "lib",
+    "rootDir": "src",
+    "strictNullChecks": true,
+    "skipLibCheck": true
   },
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*.ts"]
 }

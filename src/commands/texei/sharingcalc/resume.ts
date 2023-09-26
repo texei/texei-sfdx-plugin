@@ -1,133 +1,138 @@
-import { flags, SfdxCommand } from "@salesforce/command";
-import { Messages } from '@salesforce/core';
-import { SfdxError } from "@salesforce/core";
-import * as puppeteer from "puppeteer";
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/restrict-plus-operands */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import {
+  SfCommand,
+  Flags,
+  orgApiVersionFlagWithDeprecations,
+  requiredOrgFlagWithDeprecations,
+  loglevel,
+} from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
+import * as puppeteer from 'puppeteer';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages(
-  "texei-sfdx-plugin",
-  "sharingcalc-resume"
-);
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'sharingcalc.resume');
+
+export type SharingcalcResumeResult = {
+  message: string;
+};
 
 const mapSharingLabel = new Map([
-    ['sharingRule', 'Sharing Rule'],
-    ['groupMembership', 'Group Membership']
-  ]);
+  ['sharingRule', 'Sharing Rule'],
+  ['groupMembership', 'Group Membership'],
+]);
 
-export default class Resume extends SfdxCommand {
-  public static description = messages.getMessage("commandDescription");
+export default class Resume extends SfCommand<SharingcalcResumeResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-    `$ sfdx texei:sharingcalc:resume" \nSharing calculations resumed\n`
-  ];
+  public static readonly examples = ['$ sf texei sharingcalc resume" \nSharing calculations resumed\n'];
 
-  protected static flagsConfig = {
-    scope: flags.string({
-      char: "s",
-      description: messages.getMessage("scopeFlagDescription"),
+  public static readonly flags = {
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': orgApiVersionFlagWithDeprecations,
+    scope: Flags.string({
+      char: 's',
+      summary: messages.getMessage('flags.scope.summary'),
+      options: ['sharingRule', 'groupMembership'],
+      default: 'sharingRule',
       required: false,
-      options: ["sharingRule", "groupMembership"],
-      default: "sharingRule"
     }),
-    timeout: flags.number({
-      char: "t",
-      description: messages.getMessage("commandTimeout"),
+    timeout: Flags.integer({
+      char: 't',
+      summary: messages.getMessage('flags.timeout.summary'),
       required: false,
-      default: 120000
-    })
+      default: 120000,
+    }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
-
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = true;
-
-  // Comment this out if your command does not support a hub org username
-  protected static requiresDevhubUsername = false;
-
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
 
   private timeoutHandler = null;
 
-  public async run(): Promise<any> {
-    let result = {};
+  public async run(): Promise<SharingcalcResumeResult> {
+    const { flags } = await this.parse(Resume);
 
     // Start timeout handler
+    // @ts-ignore: TODO: working code, but look at TS warning
     this.timeoutHandler = setTimeout(() => {
       if (this.timeoutHandler) {
-        throw new SfdxError("There has been a puppeteer timeout while processing Sharing Calc Resume operation");
+        throw new SfError('There has been a puppeteer timeout while processing Sharing Calc Resume operation');
       }
-    } , this.flags.timeout);
+    }, flags.timeout);
 
     // Process operation
-    await this.resumeSharingCalc();
+    const result = await this.resumeSharingCalc(flags);
 
     // Clear timeout handler
+    // @ts-ignore: TODO: working code, but look at TS warning
     clearTimeout(this.timeoutHandler);
-    this.timeoutHandler = null ;
+    this.timeoutHandler = null;
 
-    return result;
+    return { message: result };
   }
 
-  private async resumeSharingCalc() {
-    const instanceUrl = this.org.getConnection().instanceUrl;
+  private async resumeSharingCalc(flags) {
+    const instanceUrl = flags['target-org'].getConnection(flags['api-version']).instanceUrl;
 
-    const SHARING_CALC_PATH = "/p/own/DeferSharingSetupPage";
+    const SHARING_CALC_PATH = '/p/own/DeferSharingSetupPage';
 
-    this.ux.startSpinner(`Resuming ${mapSharingLabel.get(this.flags.scope)} Calculations`, null, { stdout: true });
-    this.debug(`DEBUG Login to Org`);
+    this.spinner.start(`Resuming ${mapSharingLabel.get(flags.scope)} Calculations`, undefined, { stdout: true });
+    this.debug('DEBUG Login to Org');
 
     const browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: !(process.env.BROWSER_DEBUG === "true")
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: !(process.env.BROWSER_DEBUG === 'true'),
     });
     const page = await browser.newPage();
     await page.goto(
-      `${instanceUrl}/secur/frontdoor.jsp?sid=${
-        this.org.getConnection().accessToken
-      }`,
-      { waitUntil: ["domcontentloaded", "networkidle0"] }
+      `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
+      { waitUntil: ['domcontentloaded', 'networkidle0'] }
     );
     const navigationPromise = page.waitForNavigation();
 
-    this.debug(`DEBUG Opening Defer Sharing Calculations page`);
+    this.debug('DEBUG Opening Defer Sharing Calculations page');
 
     await page.goto(`${instanceUrl + SHARING_CALC_PATH}`);
     await navigationPromise;
 
-    this.debug(`DEBUG Clicking 'Resume' button`);
+    this.debug("DEBUG Clicking 'Resume' button");
 
     try {
       // Resume either Group Membership or Sharing Rules
-      if (this.flags.scope === "groupMembership") {
+      if (flags.scope === 'groupMembership') {
         await page.click(
-          `#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_resume"].btn`
+          '#gmSect > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="group_resume"].btn'
         );
 
         // click the yes button to recaulcate group memberships immediately
-        await page.click(
-          `div#group_resume_dialog_buttons > input[value=" Yes "]`
-        );
+        await page.click('div#group_resume_dialog_buttons > input[value=" Yes "]');
       } else {
         await page.click(
-          `#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_resume"].btn`
+          '#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_resume"].btn'
         );
       }
     } catch (ex) {
+      // eslint-disable-next-line no-console
       console.log('Unable to resume sharing.', ex.message);
     }
 
     await navigationPromise;
 
-    this.debug(`DEBUG Closing browser`);
+    this.debug('DEBUG Closing browser');
 
     await browser.close();
 
-    this.ux.stopSpinner("Done.");
+    this.spinner.stop('Done.');
 
-    return { message: `Resumed ${mapSharingLabel.get(this.flags.scope)} Calculations` };
+    return `Resumed ${mapSharingLabel.get(flags.scope)} Calculations`;
   }
 }

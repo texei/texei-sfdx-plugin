@@ -1,5 +1,0 @@
-{
-    "commandDescription": "[BETA] Extract Org Shape for an org",
-    "directoryFlagDescription": "the output directory to store the extracted definition file",
-    "scopeFlagDescription": "the scope of settings to convert to the scratch definition file"
-  }
