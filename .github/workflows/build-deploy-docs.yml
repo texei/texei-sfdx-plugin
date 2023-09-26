@@ -1,4 +1,4 @@
-name: "DOC - Build and deploy with sfdx-hardis"
+name: 'DOC - Build and deploy with sfdx-hardis'
 on:
   push:
     branches:
@@ -10,14 +10,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v3
       # Build doc with sfdx-hardis
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         with:
-          node-version: "14.x"
+          node-version: 16
       - run: yarn
       - run: yarn prepack
-      - run: npm i sfdx-cli -g
+      - run: npm i @salesforce/cli -g
       - run: echo y|sfdx plugins:install sfdx-hardis
       - run: sfdx hardis:doc:plugin:generate
       # Deploy docs with mkdocs-material
