@@ -19,6 +19,7 @@ import {
 } from '@salesforce/sf-plugins-core';
 import { Messages, Connection, SfError } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
+import { SourceTracking } from '@salesforce/source-tracking';
 import { getMetadata, getLayoutsForObject, getRecordTypesForObject } from '../../../shared/sfdxProjectFolder';
 import { nodesNotAllowed, nodesHavingDefault } from '../../../shared/skinnyProfileHelper';
 
@@ -127,6 +128,17 @@ export default class Retrieve extends SfCommand<RetrieveResult> {
     const maxApiVersion: string = await flags['target-org'].retrieveMaxApiVersion();
     await this.retrievePackage(typesToRetrieve, flags.timeout, maxApiVersion);
 
+    const tracking = await SourceTracking.create({
+      org: flags['target-org'],
+      project: this.project,
+    });
+
+    // Update local tracking so that Profiles won't be listed as modified and generate conflicts later
+    await tracking.updateLocalTracking({
+      files: retrievedProfiles,
+      deletedFiles: [],
+    });
+
     this.spinner.stop('Done.');
 
     return { retrievedProfiles };
@@ -164,6 +176,7 @@ export default class Retrieve extends SfCommand<RetrieveResult> {
           if (entry.path.endsWith('.profile')) {
             const profileFileName = entry.path.substring(entry.path.lastIndexOf('/') + 1, entry.path.length);
             const profilePath = path.join(defaultProjectPath, 'profiles', `${profileFileName}-meta.xml`);
+
             const writeStream = fs.createWriteStream(profilePath);
             entry.pipe(writeStream);
 
@@ -198,7 +211,7 @@ export default class Retrieve extends SfCommand<RetrieveResult> {
   }
 
   public async cleanProfile(profile: string): Promise<string> {
-    this.log('cleanProfile');
+    this.debug('cleanProfile');
 
     // Parsing file
     const profileJson: any = await xml2js.parseStringPromise(profile);
