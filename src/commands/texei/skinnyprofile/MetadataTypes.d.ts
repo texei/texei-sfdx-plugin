@@ -1,0 +1,3 @@
+interface ProfileMetadataType {
+  Profile: string;
+}
