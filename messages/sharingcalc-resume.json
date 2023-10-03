@@ -1,5 +1,0 @@
-{
-    "commandDescription": "resumed sharing calculation",
-    "scopeFlagDescription": "scope of resumed calculations",
-    "commandTimeout": "Timeout for the sfdx command, in milliseconds"
-}

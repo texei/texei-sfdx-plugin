@@ -1,49 +1,59 @@
-import { SfdxCommand } from '@salesforce/command';
-import { Messages, SfdxError } from '@salesforce/core';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  SfCommand,
+  orgApiVersionFlagWithDeprecations,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages('texei-sfdx-plugin', 'debug-lwc-enable');
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'debug.lwc.enable');
 
-export default class Enable extends SfdxCommand {
+export type DebugLwcEnableResult = {
+  username: string;
+  UserPreferencesUserDebugModePref: boolean;
+};
 
-  public static description = messages.getMessage('commandDescription');
+export default class Enable extends SfCommand<DebugLwcEnableResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  public static examples = [
-    `sfdx texei:debug:lwc:enable --targetusername myOrg@example.com`
-  ];
+  public static readonly examples = ['sf texei debug lwc enable --target-org myOrg@example.com'];
 
-  protected static flagsConfig = {};
+  public static readonly flags = {
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': orgApiVersionFlagWithDeprecations,
+  };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = true;
+  public async run(): Promise<DebugLwcEnableResult> {
+    const { flags } = await this.parse(Enable);
 
-  // Comment this out if your command does not support a hub org username
-  protected static supportsDevhubUsername = false;
+    const userName = flags['target-org'].getUsername() as string;
+    const conn = flags['target-org'].getConnection(flags['api-version']);
 
-  // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = false;
-
-  public async run(): Promise<any> {
-
-    const userName = this.org.getUsername();
-    const conn = this.org.getConnection();
-
-    const res = await conn.sobject('User').upsert([{ 
-      UserPreferencesUserDebugModePref : true,
-      Username : userName
-    }], 'Username');
+    const res = await conn.sobject('User').upsert(
+      [
+        {
+          UserPreferencesUserDebugModePref: true,
+          Username: userName,
+        },
+      ],
+      'Username'
+    );
 
     let debugModePref = false;
     if (res[0]?.success === true) {
       debugModePref = true;
-      this.ux.log(`Lightning Component Debug Mode enabled for user ${userName}`);
-    }
-    else {
-      throw new SfdxError(`${res[0].errors[0].statusCode}: ${res[0].errors[0].message}`);
+      this.log(`Lightning Component Debug Mode enabled for user ${userName}`);
+    } else {
+      // @ts-ignore: TODO: working code, but look at TS warning
+      throw new SfError(`${res[0].errors[0].statusCode}: ${res[0].errors[0].message}`);
     }
 
     // Everything went fine, return an object that will be used for --json

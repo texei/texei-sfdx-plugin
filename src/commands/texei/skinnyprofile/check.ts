@@ -1,81 +1,77 @@
-import { flags, SfdxCommand } from "@salesforce/command";
-import { Messages, SfdxError } from "@salesforce/core";
-import { nodesNotAllowed } from "../../../shared/skinnyProfileHelper";
-import { getDefaultPackagePath } from "../../../shared/sfdxProjectFolder";
-import { promises as fs } from 'fs';
+import * as fs from 'fs';
 import * as path from 'path';
-const util = require('util');
-const xml2js = require('xml2js');
+import xml2js = require('xml2js');
+import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
+import { Messages, SfError } from '@salesforce/core';
+import { nodesNotAllowed } from '../../../shared/skinnyProfileHelper';
+import { getDefaultPackagePath } from '../../../shared/sfdxProjectFolder';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = Messages.loadMessages("texei-sfdx-plugin", "skinnyprofile-check");
+const messages = Messages.loadMessages('texei-sfdx-plugin', 'skinnyprofile.check');
 
-export default class Retrieve extends SfdxCommand {
-  public static description = messages.getMessage("commandDescription");
+export type CheckResult = {
+  message: string;
+};
 
-  public static examples = ["$ texei:skinnyprofile:check"];
+export default class Check extends SfCommand<CheckResult> {
+  public static readonly summary = messages.getMessage('summary');
+
+  public static readonly examples = ['$ sf texei skinnyprofile check'];
 
   // TODO: add path for project files
-  protected static flagsConfig = {
-    path: flags.string({ char: 'p', required: false, description: 'path to profiles folder. Default: default package directory' })
+  public static readonly flags = {
+    path: Flags.string({ char: 'p', required: false, summary: messages.getMessage('flags.path.summary') }),
+    // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
+    loglevel,
   };
 
-  // Comment this out if your command does not require an org username
-  protected static requiresUsername = false;
-
-  // Comment this out if your command does not require a hub org username
-  protected static requiresDevhubUsername = false;
-
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
-  protected static requiresProject = true;
+  public static readonly requiresProject = true;
 
-  public async run(): Promise<any> {
-    let invalidProfiles = [];
-    let profilesToCheck = [];
+  public async run(): Promise<CheckResult> {
+    const { flags } = await this.parse(Check);
+
+    const invalidProfiles: string[] = [];
+    let profilesToCheck: string[] = [];
     let commandResult = '';
 
     // Get profiles files path
-    if (this.flags.path) {
+    if (flags.path) {
       // A path was provided with the flag
-      profilesToCheck = await this.getProfilesInPath(this.flags.path);
-    }
-    else {
+      profilesToCheck = this.getProfilesInPath(flags.path);
+    } else {
       // Else look in the default package directory
       const defaultPackageDirectory = path.join(await getDefaultPackagePath(), 'profiles');
-      profilesToCheck = await this.getProfilesInPath(defaultPackageDirectory);
+      profilesToCheck = this.getProfilesInPath(defaultPackageDirectory);
     }
 
-    if (profilesToCheck === undefined || profilesToCheck.length == 0) {
+    if (profilesToCheck === undefined || profilesToCheck.length === 0) {
       commandResult = 'No Profile found';
-    }
-    else {
+    } else {
       for (const profilePath of profilesToCheck) {
-
         // Generate path
-        const filePath = path.join(
-          process.cwd(),
-          profilePath
-        );
-  
+        const filePath = path.join(process.cwd(), profilePath);
+
         // Read data file
-        const data = await fs.readFile(filePath, 'utf8');
-  
+        const data = fs.readFileSync(filePath, 'utf8');
+
         // Parsing file
-        // According to xml2js doc it's better to recreate a parser for each file
-        // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
-        var parser = new xml2js.Parser();
-        const parseString = util.promisify(parser.parseString);
-        const profileJson = JSON.parse(JSON.stringify(await parseString(data)));
-        
+        // TODO: refactor to avoid await in loop ? Not sure we want all metadata in memory
+        // eslint-disable-next-line
+        const profileJson: ProfileMetadataType = (await xml2js.parseStringPromise(data)) as ProfileMetadataType;
+
         // Looking for unwanted nodes
-        for (const [key, value] of Object.entries(profileJson.Profile)) {
-          this.debug(`key: ${key} - value: ${value}`);
+        for (const [key, value] of Object.entries(profileJson?.Profile)) {
+          this.debug('key:');
           this.debug(key);
-          if (profileJson.Profile.hasOwnProperty(key)) {
+          this.debug('value:');
+          this.debug(value);
+
+          if (Object.prototype.hasOwnProperty.call(profileJson.Profile, key)) {
             if (nodesNotAllowed.includes(key)) {
               // Could definitely be improved
               if (!invalidProfiles.includes(profilePath)) {
@@ -88,43 +84,39 @@ export default class Retrieve extends SfdxCommand {
       }
     }
 
-    if (invalidProfiles.length == 0) {
+    if (invalidProfiles.length === 0) {
       commandResult = 'All Profiles valid';
-    }
-    else {
-      throw new SfdxError(`Invalid Profile${invalidProfiles.length > 1 ? 's' : ''} found: ${invalidProfiles.join(', ')}. Please run sfdx texei:skinnyprofile:retrieve`);
+    } else {
+      throw new SfError(
+        `Invalid Profile${invalidProfiles.length > 1 ? 's' : ''} found: ${invalidProfiles.join(
+          ', '
+        )}. Please run sfdx texei:skinnyprofile:retrieve`
+      );
     }
 
-    this.ux.log(commandResult);
+    this.log(commandResult);
 
     return { message: commandResult };
   }
 
-  private async getProfilesInPath(pathToRead: string) {
-    let profilesInPath = [];
+  private getProfilesInPath(pathToRead: string): string[] {
+    this.debug(`getProfilesInPath --> pathToRead:${pathToRead}`);
 
-    const filesInDir = await fs.readdir(pathToRead);
+    const profilesInPath: string[] = [];
+
+    const filesInDir = fs.readdirSync(pathToRead);
 
     for (const fileInDir of filesInDir) {
-
-      const dirOrFilePath = path.join(
-        process.cwd(),
-        pathToRead,
-        fileInDir
-      );
+      const dirOrFilePath = path.join(process.cwd(), pathToRead, fileInDir);
 
       // If it's a Profile file, add it
-      if (!(await fs.lstat(dirOrFilePath)).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
-
-        const profileFoundPath = path.join(
-          pathToRead,
-          fileInDir
-        );
+      if (!fs.lstatSync(dirOrFilePath).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
+        const profileFoundPath = path.join(pathToRead, fileInDir);
 
         profilesInPath.push(profileFoundPath);
       }
     }
-    
+
     return profilesInPath;
   }
 }
