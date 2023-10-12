@@ -17,6 +17,7 @@ import {
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
+import { findObjectsFolders } from '../../../shared/sfdxProjectFolder';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -58,41 +59,49 @@ export default class Unrestrict extends SfCommand<PicklistUnrestrictResult> {
 
     const picklistMetadata = [];
 
-    const filesPath = path.join(process.cwd(), 'force-app', 'main', 'default', 'objects');
-    const objectFolders = await fs.promises.readdir(filesPath, 'utf8');
+    const objectsFolderPaths: string[] = [];
+    const EXCLUDED_DIRS = ['node_modules', '.git'];
 
-    for (const folder of objectFolders) {
-      // Excluse Custom Metadata
-      if (!folder.endsWith('__mdt')) {
-        const fieldsPath = path.join(filesPath, folder, 'fields');
-        if (fs.existsSync(fieldsPath)) {
-          const fieldsFolder = await fs.promises.readdir(fieldsPath, 'utf8');
-          for (const fieldFile of fieldsFolder) {
-            // Read File file
-            const fieldFilePath = path.join(fieldsPath, fieldFile);
-            const fieldData = await fs.promises.readFile(fieldFilePath, 'utf8');
+    // Get all the objects folder paths
+    for (const recType of findObjectsFolders(process.cwd(), EXCLUDED_DIRS)) {
+      objectsFolderPaths.push(recType);
+    }
 
-            // Parsing file
-            // According to xml2js doc it's better to recreate a parser for each file
-            // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
-            const parser = new xml2js.Parser({ explicitArray: false });
-            // eslint-disable-next-line @typescript-eslint/unbound-method
-            const parseString = util.promisify(parser.parseString);
-            // @ts-ignore: TODO: working code, but look at TS warning
-            const fieldJson = JSON.parse(JSON.stringify(await parseString(fieldData)));
-            if (
-              (fieldJson.CustomField.type === 'Picklist' || fieldJson.CustomField.type === 'MultiselectPicklist') &&
-              fieldJson.CustomField.valueSet?.valueSetName === undefined &&
-              fieldJson.CustomField.valueSet?.restricted === 'true'
-            ) {
-              // Clean Json for update
-              const fieldMetadata = fieldJson.CustomField;
-              fieldMetadata.fullName = `${folder}.${fieldJson.CustomField.fullName}`;
-              fieldMetadata.valueSet.restricted = 'false';
-              delete fieldMetadata['$'];
-              delete fieldMetadata['@xsi:type'];
+    for (const objectsFolderPath of objectsFolderPaths) {
+      const objectFolders = await fs.promises.readdir(objectsFolderPath, 'utf8');
+      for (const folder of objectFolders) {
+        // Excluse Custom Metadata
+        if (!folder.endsWith('__mdt')) {
+          const fieldsPath = path.join(objectsFolderPath, folder, 'fields');
+          if (fs.existsSync(fieldsPath)) {
+            const fieldsFolder = await fs.promises.readdir(fieldsPath, 'utf8');
+            for (const fieldFile of fieldsFolder) {
+              // Read File file
+              const fieldFilePath = path.join(fieldsPath, fieldFile);
+              const fieldData = await fs.promises.readFile(fieldFilePath, 'utf8');
+
+              // Parsing file
+              // According to xml2js doc it's better to recreate a parser for each file
+              // https://www.npmjs.com/package/xml2js#user-content-parsing-multiple-files
+              const parser = new xml2js.Parser({ explicitArray: false });
+              // eslint-disable-next-line @typescript-eslint/unbound-method
+              const parseString = util.promisify(parser.parseString);
               // @ts-ignore: TODO: working code, but look at TS warning
-              picklistMetadata.push(fieldMetadata);
+              const fieldJson = JSON.parse(JSON.stringify(await parseString(fieldData)));
+              if (
+                (fieldJson.CustomField.type === 'Picklist' || fieldJson.CustomField.type === 'MultiselectPicklist') &&
+                fieldJson.CustomField.valueSet?.valueSetName === undefined &&
+                fieldJson.CustomField.valueSet?.restricted === 'true'
+              ) {
+                // Clean Json for update
+                const fieldMetadata = fieldJson.CustomField;
+                fieldMetadata.fullName = `${folder}.${fieldJson.CustomField.fullName}`;
+                fieldMetadata.valueSet.restricted = 'false';
+                delete fieldMetadata['$'];
+                delete fieldMetadata['@xsi:type'];
+                // @ts-ignore: TODO: working code, but look at TS warning
+                picklistMetadata.push(fieldMetadata);
+              }
             }
           }
         }

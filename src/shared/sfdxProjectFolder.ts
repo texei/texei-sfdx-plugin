@@ -23,6 +23,31 @@ export function getMetadata(metadata: string): string[] {
   return metadatas;
 }
 
+// Get all paths of objects folders with the possibility to exclude specific folders
+export function findObjectsFolders(startPath: string, excludedDirs: string[] = []): string[] {
+  const result: string[] = [];
+  const filesAndDirs = fs.readdirSync(startPath);
+
+  for (const fileOrDir of filesAndDirs) {
+    const fullPath = path.join(startPath, fileOrDir);
+
+    if (fs.statSync(fullPath).isDirectory()) {
+      // If the directory is in the exclusion list, skip it.
+      if (excludedDirs.includes(fileOrDir)) {
+        continue;
+      }
+
+      if (fileOrDir === 'objects') {
+        result.push(fullPath);
+      }
+
+      result.push(...findObjectsFolders(fullPath, excludedDirs));
+    }
+  }
+
+  return result;
+}
+
 export function getFieldsForObject(objectName: string): string[] {
   const fieldsPath = path.join('force-app', 'main', 'default', 'objects', objectName, 'fields');
 
