@@ -18,6 +18,7 @@ export default class Create extends SfCommand<SkinnyprofileCreateResult> {
   public static readonly flags = {
     'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
+    name: Flags.string({ char: 'n', required: false, summary: messages.getMessage('flags.name.summary') }),
   };
 
   public async run(): Promise<SkinnyprofileCreateResult> {
@@ -36,17 +37,28 @@ export default class Create extends SfCommand<SkinnyprofileCreateResult> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     const res = await connection?.metadata.read('Profile', fullNames);
     // eslint-disable-next-line no-console
-    console.log(res);
+    // console.log(JSON.stringify(res));
+
+    // const desc = await connection?.tooling.sobject('Profile').describe();
+    // const desc = await connection?.sobject('Profile').describe();
+    // eslint-disable-next-line @typescript-eslint/quotes
+    const desc = await connection?.tooling.query(
+      `Select Metadata from Profile where Name = 'Minimum Access - Salesforce'`
+    );
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify(desc));
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     if (res) {
-      res[0].fullName = 'My New Profile';
+      res[0].fullName = flags.name;
     }
 
+    /*
     // @ts-ignore: whatever
     const res2 = await connection?.metadata.create('Profile', res);
     // eslint-disable-next-line no-console
-    console.log(res2);
+    console.log(JSON.stringify(res2));
+    */
 
     return {
       name: 'flags.name',

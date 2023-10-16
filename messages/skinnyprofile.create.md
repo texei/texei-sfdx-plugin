@@ -9,3 +9,7 @@ command description
 # examples
 
 command examples
+
+# flags.name.summary
+
+profile name
