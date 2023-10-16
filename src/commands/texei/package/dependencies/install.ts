@@ -243,7 +243,9 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
         // INSTALLATION KEY
         // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
         if (installationKeys && installationKeys[i]) {
-          args.push('--installationkey');
+          // use -k instead of --installationkey to avoid breaking script between --installationkey and --installation-key
+          // in case scripts still use sfdx instead of sf v2
+          args.push('-k');
           args.push(`${installationKeys[i]}`);
         }
 
