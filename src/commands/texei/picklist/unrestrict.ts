@@ -17,7 +17,7 @@ import {
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
-import { findObjectsFolders } from '../../../shared/sfdxProjectFolder';
+import { getPackagesPaths, findObjectsFolders } from '../../../shared/sfdxProjectFolder';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -62,8 +62,11 @@ export default class Unrestrict extends SfCommand<PicklistUnrestrictResult> {
     const objectsFolderPaths: string[] = [];
     const EXCLUDED_DIRS = ['node_modules', '.git'];
 
-    // Get all the objects folder paths
-    for (const recType of findObjectsFolders(process.cwd(), EXCLUDED_DIRS)) {
+    // Get packages paths
+    const packagesPaths: string[] = await getPackagesPaths();
+
+    // Get all the objects folder paths inside the package ones
+    for (const recType of findObjectsFolders(packagesPaths, EXCLUDED_DIRS)) {
       objectsFolderPaths.push(recType);
     }
 
