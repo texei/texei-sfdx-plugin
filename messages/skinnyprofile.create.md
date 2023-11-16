@@ -8,8 +8,12 @@ command description
 
 # examples
 
-command examples
+sf texei skinnyprofile create
 
-# flags.name.summary
+# flags.path.summary
 
-profile name
+path to profiles folder. Default: default package directory
+
+# flags.ignoreerrors.summary
+
+if any profile creation fails, command exits as succeeded anyway

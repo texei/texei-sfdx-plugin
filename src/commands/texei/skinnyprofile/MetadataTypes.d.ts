@@ -1,3 +1,12 @@
 interface ProfileMetadataType {
-  Profile: string;
+  Profile: {
+    custom: boolean;
+    userLicense: string;
+  };
+}
+
+interface PermissionSetRecord {
+  Profile: {
+    Name: string;
+  };
 }

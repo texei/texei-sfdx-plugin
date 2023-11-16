@@ -111,3 +111,26 @@ export async function getDefaultPackagePath(): Promise<string> {
 
   return foundPath;
 }
+
+export function getProfilesInPath(pathToRead: string, returnWithPath: boolean): string[] {
+  const profilesInPath: string[] = [];
+
+  const filesInDir = fs.readdirSync(pathToRead);
+
+  for (const fileInDir of filesInDir) {
+    const dirOrFilePath = path.join(process.cwd(), pathToRead, fileInDir);
+
+    // If it's a Profile file, add it
+    if (!fs.lstatSync(dirOrFilePath).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
+      let profileFoundPath = fileInDir;
+
+      if (returnWithPath) {
+        profileFoundPath = path.join(pathToRead, fileInDir);
+      }
+
+      profilesInPath.push(profileFoundPath);
+    }
+  }
+
+  return profilesInPath;
+}
