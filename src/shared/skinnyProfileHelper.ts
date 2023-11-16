@@ -1,3 +1,5 @@
+// import * as puppeteer from 'puppeteer';
+
 // This should be on a Permission Set
 export const nodesNotAllowed = [
   'userPermissions',

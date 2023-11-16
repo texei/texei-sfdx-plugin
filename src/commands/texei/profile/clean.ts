@@ -13,7 +13,7 @@ import util = require('util');
 import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
-import { getDefaultPackagePath } from '../../../shared/sfdxProjectFolder';
+import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -45,12 +45,12 @@ export default class Clean extends SfCommand<ProfileCleanResult> {
   public async run(): Promise<ProfileCleanResult> {
     const { flags } = await this.parse(Clean);
 
-    const cleanResult = [];
+    const cleanResult: string[] = [];
 
     // TODO: Keep default recordTypeVisibilities & applicationVisibilities like in skinnyprofile:retrieve
     const defaultKeep = ['layoutAssignments', 'loginHours', 'loginIpRanges', 'custom', 'userLicense'];
     const nodesToKeep = flags.keep ? flags.keep : defaultKeep;
-    let profilesToClean = [];
+    let profilesToClean: string[] = [];
 
     // Get profiles files path
     if (flags.path) {
@@ -66,13 +66,13 @@ export default class Clean extends SfCommand<ProfileCleanResult> {
         } else {
           // Flag provided value doesn't end like a Profile source metadata
           // Expect it's a folder
-          profilesToClean = await this.getProfilesInPath(currentPath);
+          profilesToClean = await getProfilesInPath(currentPath, true);
         }
       }
     } else {
       // Else look in the default package directory
       const defaultPackageDirectory = path.join(await getDefaultPackagePath(), 'profiles');
-      profilesToClean = await this.getProfilesInPath(defaultPackageDirectory);
+      profilesToClean = await getProfilesInPath(defaultPackageDirectory, true);
     }
 
     // eslint-disable-next-line eqeqeq
@@ -126,26 +126,5 @@ export default class Clean extends SfCommand<ProfileCleanResult> {
     }
 
     return { profilesCleaned: cleanResult };
-  }
-
-  private async getProfilesInPath(pathToRead: string) {
-    const profilesInPath = [];
-
-    const readDirectory = util.promisify(fs.readdir);
-    const filesInDir = await readDirectory(pathToRead);
-
-    for (const fileInDir of filesInDir) {
-      const dirOrFilePath = path.join(process.cwd(), pathToRead, fileInDir);
-
-      // If it's a Profile file, add it
-      if (!fs.lstatSync(dirOrFilePath).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
-        const profileFoundPath = path.join(pathToRead, fileInDir);
-
-        // @ts-ignore: TODO: working code, but look at TS warning
-        profilesInPath.push(profileFoundPath);
-      }
-    }
-
-    return profilesInPath;
   }
 }

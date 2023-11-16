@@ -4,7 +4,7 @@ import xml2js = require('xml2js');
 import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { nodesNotAllowed } from '../../../shared/skinnyProfileHelper';
-import { getDefaultPackagePath } from '../../../shared/sfdxProjectFolder';
+import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -42,11 +42,11 @@ export default class Check extends SfCommand<CheckResult> {
     // Get profiles files path
     if (flags.path) {
       // A path was provided with the flag
-      profilesToCheck = this.getProfilesInPath(flags.path);
+      profilesToCheck = getProfilesInPath(flags.path, true);
     } else {
       // Else look in the default package directory
       const defaultPackageDirectory = path.join(await getDefaultPackagePath(), 'profiles');
-      profilesToCheck = this.getProfilesInPath(defaultPackageDirectory);
+      profilesToCheck = getProfilesInPath(defaultPackageDirectory, true);
     }
 
     if (profilesToCheck === undefined || profilesToCheck.length === 0) {
@@ -97,26 +97,5 @@ export default class Check extends SfCommand<CheckResult> {
     this.log(commandResult);
 
     return { message: commandResult };
-  }
-
-  private getProfilesInPath(pathToRead: string): string[] {
-    this.debug(`getProfilesInPath --> pathToRead:${pathToRead}`);
-
-    const profilesInPath: string[] = [];
-
-    const filesInDir = fs.readdirSync(pathToRead);
-
-    for (const fileInDir of filesInDir) {
-      const dirOrFilePath = path.join(process.cwd(), pathToRead, fileInDir);
-
-      // If it's a Profile file, add it
-      if (!fs.lstatSync(dirOrFilePath).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
-        const profileFoundPath = path.join(pathToRead, fileInDir);
-
-        profilesInPath.push(profileFoundPath);
-      }
-    }
-
-    return profilesInPath;
   }
 }
