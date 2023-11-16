@@ -15,7 +15,7 @@ import {
   Flags,
   orgApiVersionFlagWithDeprecations,
   requiredOrgFlagWithDeprecations,
-  requiredHubFlagWithDeprecations,
+  optionalHubFlagWithDeprecations,
   loglevel,
 } from '@salesforce/sf-plugins-core';
 import { JsonArray, JsonMap } from '@salesforce/ts-types';
@@ -49,7 +49,7 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
 
   public static readonly flags = {
     'target-org': requiredOrgFlagWithDeprecations,
-    'target-dev-hub': requiredHubFlagWithDeprecations,
+    'target-dev-hub': optionalHubFlagWithDeprecations,
     'api-version': orgApiVersionFlagWithDeprecations,
     installationkeys: Flags.string({
       char: 'k',
@@ -243,7 +243,9 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
         // INSTALLATION KEY
         // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
         if (installationKeys && installationKeys[i]) {
-          args.push('--installationkey');
+          // use -k instead of --installationkey to avoid breaking script between --installationkey and --installation-key
+          // in case scripts still use sfdx instead of sf v2
+          args.push('-k');
           args.push(`${installationKeys[i]}`);
         }
 
@@ -339,11 +341,16 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
       query += ' ORDER BY BuildNumber DESC Limit 1';
 
       // Query DevHub to get the expected Package2Version
-      const connDevHub = flags['target-dev-hub'].getConnection(flags['api-version']);
-      const resultPackageId = await connDevHub.tooling.query(query);
+      // Check there is a DevHub
+      if (flags['target-dev-hub'] !== undefined) {
+        const connDevHub = flags['target-dev-hub'].getConnection(flags['api-version']);
+        const resultPackageId = await connDevHub.tooling.query(query);
 
-      if (resultPackageId.size > 0) {
-        packageId = resultPackageId.records[0].SubscriberPackageVersionId;
+        if (resultPackageId.size > 0) {
+          packageId = resultPackageId.records[0].SubscriberPackageVersionId;
+        }
+      } else {
+        throw new SfError('No default dev hub found. Use -v or --target-dev-hub to specify an environment.');
       }
     }
 
