@@ -365,75 +365,75 @@ export default class Import extends SfCommand<ImportResult> {
     const sobjectsResult: RecordResult[] = new Array<RecordResult>();
 
     // So far, a whole file will be either upserted, inserted or updated
-    if (externalIdField) {
-      // external id field is specified --> upsert
-      this.debug(`DEBUG upserting ${sobjectName} records using external id field '${externalIdField}'`);
-
-      records.forEach((record) => {
-        record[externalIdField] = encodeURIComponent(record[externalIdField]);
-      });
-      // max. parallel upsert requests as supported by jsforce (default)
-      // https://github.com/jsforce/jsforce/blob/82fcc5284215e95047d0f735dd3037a1aeba5d88/lib/connection.js#L82
-      const maxParallelUpsertRequests = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 10;
-
-      // @ts-ignore: TODO: working code, but look at TS warning
-      for (let i = 0; i < records.length; i += maxParallelUpsertRequests) {
-        // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
-        const chunkResults: RecordResult[] = await conn
-          .sobject(sobjectName) // @ts-ignore: TODO: working code, but look at TS warning
-          .upsert(records.slice(i, i + maxParallelUpsertRequests), externalIdField, {
-            allowRecursive: true,
-            allOrNone: allornone,
-          })
-          .catch((err) => {
-            if (ignoreerrors) {
-              this.log(`Error upserting records: ${err}`);
-            } else {
-              throw new SfError(`Error upserting records: ${err}`);
-            }
-          });
-        sobjectsResult.push(...chunkResults);
-      }
-    } else {
-      if (records && records.length > 0) {
-        const recordsToInsert: any[] = new Array<any>();
-        const recordsToUpdate: any[] = new Array<any>();
-        for (const record of records) {
-          if (record.Id) {
-            // There is an Id, so it's an update
-            recordsToUpdate.push(record);
-          } else {
-            // No Id, insert record
-            recordsToInsert.push(record);
-          }
+    if (records && records.length > 0) {
+      const recordsToInsert: any[] = new Array<any>();
+      const recordsToUpdate: any[] = new Array<any>();
+      for (const record of records) {
+        if (record.Id) {
+          // There is an Id, so it's an update
+          recordsToUpdate.push(record);
+        } else {
+          // No Id, insert or upsert record
+          recordsToInsert.push(record);
         }
+      }
 
-        // UPDATING RECORDS
-        if (recordsToUpdate.length > 0) {
-          this.debug(`DEBUG updating ${sobjectName} records`);
+      // UPDATING RECORDS
+      if (recordsToUpdate.length > 0) {
+        this.debug(`DEBUG updating ${sobjectName} records`);
 
-          // Checking if a batch size is specified
-          const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;
+        // Checking if a batch size is specified
+        const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 200;
+        // @ts-ignore: TODO: working code, but look at TS warning
+        for (let i = 0; i < recordsToUpdate.length; i += batchSize) {
+          // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
+          const chunkResults: RecordResult[] = await conn
+            .sobject(sobjectName) // @ts-ignore: TODO: working code, but look at TS warning
+            .update(recordsToUpdate.slice(i, i + batchSize), { allowRecursive: true, allOrNone: allornone })
+            .catch((err) => {
+              if (ignoreerrors) {
+                this.log(`Error importing records: ${err}`);
+              } else {
+                throw new SfError(`Error importing records: ${err}`);
+              }
+            });
+          sobjectsResult.push(...chunkResults);
+        }
+      }
+
+      // INSERTING RECORDS
+      if (recordsToInsert.length > 0) {
+        if (externalIdField) {
+          // external id field is specified --> upsert
+          this.debug(`DEBUG upserting ${sobjectName} records using external id field '${externalIdField}'`);
+
+          recordsToInsert.forEach((record) => {
+            record[externalIdField] = encodeURIComponent(record[externalIdField]);
+          });
+          // max. parallel upsert requests as supported by jsforce (default)
+          // https://github.com/jsforce/jsforce/blob/82fcc5284215e95047d0f735dd3037a1aeba5d88/lib/connection.js#L82
+          const batchSize = batchSizeMap.get(dataFileName) ? batchSizeMap.get(dataFileName) : 10;
+
           // @ts-ignore: TODO: working code, but look at TS warning
-          for (let i = 0; i < recordsToUpdate.length; i += batchSize) {
+          for (let i = 0; i < recordsToInsert.length; i += batchSize) {
             // @ts-ignore: Don't know why, but TypeScript doesn't use the correct method override
             const chunkResults: RecordResult[] = await conn
               .sobject(sobjectName) // @ts-ignore: TODO: working code, but look at TS warning
-              .update(recordsToUpdate.slice(i, i + batchSize), { allowRecursive: true, allOrNone: allornone })
+              .upsert(recordsToInsert.slice(i, i + batchSize), externalIdField, {
+                allowRecursive: true,
+                allOrNone: allornone,
+              })
               .catch((err) => {
                 if (ignoreerrors) {
-                  this.log(`Error importing records: ${err}`);
+                  this.log(`Error upserting records: ${err}`);
                 } else {
-                  throw new SfError(`Error importing records: ${err}`);
+                  throw new SfError(`Error upserting records: ${err}`);
                 }
               });
             sobjectsResult.push(...chunkResults);
           }
-        }
-
-        // INSERTING RECORDS
-        if (recordsToInsert.length > 0) {
-          // No Id, insert
+        } else {
+          // No Id and no external id, insert
           this.debug(`DEBUG inserting ${sobjectName} records`);
 
           // Checking if a batch size is specified
