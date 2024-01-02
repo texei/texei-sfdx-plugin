@@ -18,6 +18,7 @@ import {
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
+import { ElementHandle } from 'puppeteer';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -84,9 +85,11 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
 
       // Getting id for label
       const tabs = await page.$x(`//td[contains(text(), '${tabKey}')]`);
+      if (tabs.length !== 1) this.error(`Tab ${tabKey} not found!`);
 
       // Clicking on tab
-      await tabs[0].click();
+      const tab = tabs[0].asElement() as ElementHandle<Element>;
+      await tab.click();
       await navigationPromise;
 
       // For all fields on tab
