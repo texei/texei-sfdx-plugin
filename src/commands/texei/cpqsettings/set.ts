@@ -61,7 +61,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     // Init browser
     const browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: !(process.env.BROWSER_DEBUG === 'true'),
+      headless: !(process.env.BROWSER_DEBUG === 'true') ? 'new' : false,
     });
     const page = await browser.newPage();
     await page.goto(
