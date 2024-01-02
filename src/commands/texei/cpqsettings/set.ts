@@ -64,12 +64,15 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
       headless: !(process.env.BROWSER_DEBUG === 'true') ? 'new' : false,
     });
     const page = await browser.newPage();
+
+    this.log(`Logging in to instance ${instanceUrl}`);
     await page.goto(
       `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
       { waitUntil: ['domcontentloaded', 'networkidle0'] }
     );
     const navigationPromise = page.waitForNavigation();
 
+    this.log(`Navigating to CPQ Settings Page ${cpqSettingsUrl}`);
     await page.goto(`${cpqSettingsUrl}`);
     await navigationPromise;
 
@@ -132,9 +135,9 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
             await targetInput?.click();
             await navigationPromise;
 
-            this.spinner.stop(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+            this.spinner.stop(`Checkbox Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
-            this.spinner.stop('Value already ok');
+            this.spinner.stop('Checkbox Value already ok');
           }
         } else if (targetType === 'text') {
           currentValue = await (await targetInput?.getProperty('value'))?.jsonValue();
@@ -145,9 +148,9 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
             await targetInput?.type(`${cpqSettings[tabKey][key]}`);
             await page.keyboard.press('Tab');
 
-            this.spinner.stop(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+            this.spinner.stop(`Text Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
-            this.spinner.stop('Value already ok');
+            this.spinner.stop('Text Value already ok');
           }
         } else if (targetType === 'select') {
           await page.waitForXPath(`//select[@name="${attributeId}"]/option[text()='${cpqSettings[tabKey][key]}']`);
@@ -171,9 +174,9 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
               optionElement.selected = true;
             }, optionElement);
 
-            this.spinner.stop(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+            this.spinner.stop(`Picklist Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
-            this.spinner.stop('Value already ok');
+            this.spinner.stop('Picklist Value already ok');
           }
         }
 
