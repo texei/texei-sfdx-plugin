@@ -113,8 +113,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
           targetType = 'select';
         }
 
-        const isInputDisabled =
-          ((await (await targetInput?.getProperty('disabled'))?.jsonValue()) as string) !== 'disabled';
+        const isInputDisabled = (await (await targetInput?.getProperty('disabled'))?.jsonValue()) as boolean;
 
         let currentValue = '';
         if (targetType === 'checkbox') {
