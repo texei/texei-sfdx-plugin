@@ -16,7 +16,7 @@ import {
   requiredOrgFlagWithDeprecations,
   loglevel,
 } from '@salesforce/sf-plugins-core';
-import { Messages, SfError } from '@salesforce/core';
+import { Connection, Messages, Org, SfError } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
 import { ElementHandle } from 'puppeteer';
 
@@ -42,8 +42,14 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     loglevel,
   };
 
+  private org!: Org;
+  private conn!: Connection;
+
   public async run(): Promise<CpqSettingsSetResult> {
     const { flags } = await this.parse(Set);
+
+    this.org = flags['target-org'];
+    this.conn = this.org.getConnection(flags['api-version']);
 
     this.log(
       '[Warning] This command is based on HTML parsing because of a lack of supported APIs, but may break at anytime. Use at your own risk.'
@@ -56,7 +62,8 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     const cpqSettings = JSON.parse((await fs.readFile(filePath)).toString());
 
     // Get Org URL
-    const instanceUrl = flags['target-org'].getConnection(flags['api-version']).instanceUrl;
+    const instanceUrl = this.conn.instanceUrl;
+    const frontdoorUrl = await this.getFrontdoorURL();
     const cpqSettingsUrl = await this.getSettingURL(instanceUrl);
 
     // Init browser
@@ -67,10 +74,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     const page = await browser.newPage();
 
     this.log(`Logging in to instance ${instanceUrl}`);
-    await page.goto(
-      `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
-      { waitUntil: ['domcontentloaded', 'networkidle0'] }
-    );
+    await page.goto(frontdoorUrl, { waitUntil: ['domcontentloaded', 'networkidle0'] });
     const navigationPromise = page.waitForNavigation();
 
     this.log(`Navigating to CPQ Settings Page ${cpqSettingsUrl}`);
@@ -206,6 +210,14 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     await browser.close();
 
     return result;
+  }
+
+  private async getFrontdoorURL(): Promise<string> {
+    await this.org.refreshAuth(); // we need a live accessToken for the frontdoor url
+    const accessToken = this.conn.accessToken;
+    const instanceUrl = this.conn.instanceUrl;
+    const instanceUrlClean = instanceUrl.replace(/\/$/, '');
+    return `${instanceUrlClean}/secur/frontdoor.jsp?sid=${accessToken}`;
   }
 
   // eslint-disable-next-line class-methods-use-this
