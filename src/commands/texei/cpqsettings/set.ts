@@ -18,6 +18,7 @@ import {
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
+import { ElementHandle } from 'puppeteer';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -61,15 +62,18 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     // Init browser
     const browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: !(process.env.BROWSER_DEBUG === 'true'),
+      headless: !(process.env.BROWSER_DEBUG === 'true') ? 'new' : false,
     });
     const page = await browser.newPage();
+
+    this.log(`Logging in to instance ${instanceUrl}`);
     await page.goto(
       `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
       { waitUntil: ['domcontentloaded', 'networkidle0'] }
     );
     const navigationPromise = page.waitForNavigation();
 
+    this.log(`Navigating to CPQ Settings Page ${cpqSettingsUrl}`);
     await page.goto(`${cpqSettingsUrl}`);
     await navigationPromise;
 
@@ -81,99 +85,93 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
 
       // Getting id for label
       const tabs = await page.$x(`//td[contains(text(), '${tabKey}')]`);
+      if (tabs.length !== 1) this.error(`Tab ${tabKey} not found!`);
 
       // Clicking on tab
-      await tabs[0].click();
+      const tab = tabs[0].asElement() as ElementHandle<Element>;
+      await tab.click();
       await navigationPromise;
 
       // For all fields on tab
       for (const key of Object.keys(cpqSettings[tabKey])) {
         this.spinner.start(`Looking for '${key}'`, undefined, { stdout: true });
 
-        // Getting id for label
+        // Getting label and traverse to corresponding input/select
+        const xpath = `//label[contains(text(), '${key}')]/ancestor::th[contains(@class, 'labelCol')]/following-sibling::td[contains(@class, 'dataCol') or contains(@class, 'data2Col')][position()=1]//*[name()='select' or name()='input']`;
+
         // Await because some fields only appears after a few seconds when checking another one
-        await page.waitForXPath(`//label[contains(text(), '${key}')]`);
-        const labels = await page.$x(`//label[contains(text(), '${key}')]`);
-        let attributeId: string = await (await labels[0].getProperty('htmlFor')).jsonValue();
-        let escapedAttributeId = '';
+        await page.waitForXPath(xpath);
 
-        if (!attributeId) {
-          // unfortunately htmlFor isn't defined for picklists
-          // this is very dirty :'(
-          let parentId: string = await (
-            await (await labels[0].getProperty('parentNode')).getProperty('id')
-          ).jsonValue();
-          parentId = parentId.replace('_helpText-_help', '');
-          const originalElementId: number = parseInt(parentId.substring(parentId.lastIndexOf(':j_id') + 5), 10);
-          const finalElementId = originalElementId + 1;
-          parentId = parentId.substring(0, parentId.length - originalElementId.toString().length);
-          attributeId = parentId + finalElementId;
-        }
+        const targetInputs = await page.$x(xpath);
+        const targetInput = targetInputs[0] as ElementHandle<Element>;
 
-        // eslint-disable-next-line no-useless-escape
-        escapedAttributeId = attributeId.replace(/\:/g, '\\:');
-
-        // Getting target input
-        // const targetInput = await page.$(`#${escapedAttributeId}`);
         let targetType = '';
-        const targetInput = await page.$(`[name="${escapedAttributeId}"]`);
         const nodeType = await (await targetInput?.getProperty('nodeName'))?.jsonValue();
         if (nodeType === 'INPUT') {
-          targetType = await (await targetInput?.getProperty('type'))?.jsonValue();
+          targetType = (await (await targetInput?.getProperty('type'))?.jsonValue()) as string;
         } else if (nodeType === 'SELECT') {
           targetType = 'select';
         }
 
+        const isInputDisabled = (await (await targetInput?.getProperty('disabled'))?.jsonValue()) as boolean;
+
         let currentValue = '';
         if (targetType === 'checkbox') {
-          currentValue = await (await targetInput?.getProperty('checked'))?.jsonValue();
+          currentValue = (await (await targetInput?.getProperty('checked'))?.jsonValue()) as string;
 
           if (currentValue !== cpqSettings[tabKey][key]) {
+            if (isInputDisabled)
+              this.error(
+                `Input '${key}' is read-only and cannot be updated from ${currentValue} to ${cpqSettings[tabKey][key]}`
+              );
+
             await targetInput?.click();
             await navigationPromise;
 
-            this.spinner.stop(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+            this.spinner.stop(`Checkbox Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
-            this.spinner.stop('Value already ok');
+            this.spinner.stop('Checkbox Value already ok');
           }
         } else if (targetType === 'text') {
-          currentValue = await (await targetInput?.getProperty('value'))?.jsonValue();
+          currentValue = (await (await targetInput?.getProperty('value'))?.jsonValue()) as string;
 
           if (currentValue !== cpqSettings[tabKey][key]) {
+            if (isInputDisabled)
+              this.error(
+                `Input '${key}' is read-only and cannot be updated from ${currentValue} to ${cpqSettings[tabKey][key]}`
+              );
+
             await targetInput?.click({ clickCount: 3 });
             await targetInput?.press('Backspace');
             await targetInput?.type(`${cpqSettings[tabKey][key]}`);
             await page.keyboard.press('Tab');
 
-            this.spinner.stop(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+            this.spinner.stop(`Text Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
-            this.spinner.stop('Value already ok');
+            this.spinner.stop('Text Value already ok');
           }
         } else if (targetType === 'select') {
-          await page.waitForXPath(`//select[@name="${attributeId}"]/option[text()='${cpqSettings[tabKey][key]}']`);
-          const selectedOptionElement = await page.$(`select[name="${escapedAttributeId}"] option[selected]`);
-          if (selectedOptionElement) {
-            // There is a value selected
-            currentValue = await (
-              await (await page.$(`select[name="${escapedAttributeId}"] option[selected]`))?.getProperty('text')
-            )?.jsonValue();
-          } else {
-            // No selected value
-            currentValue = '';
-          }
+          await targetInput.waitForSelector(`xpath///option[text()='${cpqSettings[tabKey][key]}']`);
+          const selectedOptionValue = await (await targetInput?.getProperty('value'))?.jsonValue();
+
+          const selectedOptionElement = await targetInput.$(`option[value='${selectedOptionValue}']`);
+          currentValue = (await (await selectedOptionElement?.getProperty('text'))?.jsonValue()) as string;
 
           if (currentValue !== cpqSettings[tabKey][key]) {
-            const optionElement = (
-              await page.$x(`//select[@name="${attributeId}"]/option[text()='${cpqSettings[tabKey][key]}']`)
-            )[0];
-            // eslint-disable-next-line @typescript-eslint/no-shadow
-            await page.evaluate((optionElement) => {
-              optionElement.selected = true;
-            }, optionElement);
+            if (isInputDisabled)
+              this.error(
+                `Input '${key}' is read-only and cannot be updated from ${currentValue} to ${cpqSettings[tabKey][key]}`
+              );
 
-            this.spinner.stop(`Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
+            const optionElement = (
+              await targetInput.$$(`xpath///option[text()='${cpqSettings[tabKey][key]}']`)
+            )[0] as ElementHandle<HTMLOptionElement>;
+            const optionValue = await (await optionElement.getProperty('value')).jsonValue();
+            await targetInput.select(optionValue);
+
+            this.spinner.stop(`Picklist Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
-            this.spinner.stop('Value already ok');
+            this.spinner.stop('Picklist Value already ok');
           }
         }
 
@@ -196,7 +194,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     // Look for errors
     const errors = await page.$('.message.errorM3 .messageText');
     if (errors) {
-      let err: string = await (await errors.getProperty('innerText')).jsonValue();
+      let err: string = (await (await errors.getProperty('innerText')).jsonValue()) as string;
       err = err.replace(/(\r\n|\n|\r)/gm, '');
       this.spinner.stop('error');
       await browser.close();
