@@ -7,8 +7,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import * as path from 'path';
-import { promises as fs } from 'fs';
+import * as path from 'node:path';
+import { promises as fs } from 'node:fs';
 import {
   SfCommand,
   Flags,
