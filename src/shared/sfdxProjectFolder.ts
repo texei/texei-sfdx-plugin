@@ -4,7 +4,7 @@
 // ex. for record type: MyRecordTypeForAccount, MyRecordTypeForAccount.recordType-meta.xml, Account.MyRecordTypeForAccount
 import * as path from 'path';
 import * as fs from 'fs';
-import { SfProjectJson } from '@salesforce/core';
+import { NamedPackageDir, SfProject, SfProjectJson } from '@salesforce/core';
 import { JsonArray, JsonMap } from '@salesforce/ts-types';
 const defaultProjectFolder = 'force-app';
 const defaultPackageFolder: string = path.join('force-app', 'main', 'default');
@@ -21,6 +21,47 @@ export function getMetadata(metadata: string): string[] {
   }
 
   return metadatas;
+}
+
+export async function getPackagesPaths(): Promise<string[]> {
+  try {
+    const project: SfProject = await SfProject.resolve();
+    const packageDirectories: NamedPackageDir[] = project.getPackageDirectories();
+
+    return packageDirectories.map((dir) => dir.path);
+  } catch (error) {
+    /* eslint-disable no-console */
+    console.error('Error retrieving package paths: ', error);
+    return [];
+  }
+}
+
+// Get all paths of objects folders with the possibility to exclude specific folders
+export function findObjectsFolders(startPaths: string[], excludedDirs: string[] = []): string[] {
+  const result: string[] = [];
+  for (const iPath of startPaths) {
+    // the new loop on the new startPaths parameter
+    const filesAndDirs = fs.readdirSync(iPath);
+
+    for (const fileOrDir of filesAndDirs) {
+      const fullPath = path.join(iPath, fileOrDir);
+
+      if (fs.statSync(fullPath).isDirectory()) {
+        // If the directory is in the exclusion list, skip it.
+        if (excludedDirs.includes(fileOrDir)) {
+          continue;
+        }
+
+        if (fileOrDir === 'objects') {
+          result.push(fullPath);
+        }
+
+        result.push(...findObjectsFolders([fullPath], excludedDirs));
+      }
+    }
+  }
+
+  return result;
 }
 
 export function getFieldsForObject(objectName: string): string[] {
@@ -110,4 +151,27 @@ export async function getDefaultPackagePath(): Promise<string> {
   }
 
   return foundPath;
+}
+
+export function getProfilesInPath(pathToRead: string, returnWithPath: boolean): string[] {
+  const profilesInPath: string[] = [];
+
+  const filesInDir = fs.readdirSync(pathToRead);
+
+  for (const fileInDir of filesInDir) {
+    const dirOrFilePath = path.join(process.cwd(), pathToRead, fileInDir);
+
+    // If it's a Profile file, add it
+    if (!fs.lstatSync(dirOrFilePath).isDirectory() && fileInDir.endsWith('.profile-meta.xml')) {
+      let profileFoundPath = fileInDir;
+
+      if (returnWithPath) {
+        profileFoundPath = path.join(pathToRead, fileInDir);
+      }
+
+      profilesInPath.push(profileFoundPath);
+    }
+  }
+
+  return profilesInPath;
 }
