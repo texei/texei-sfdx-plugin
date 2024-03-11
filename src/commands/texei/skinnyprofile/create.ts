@@ -6,6 +6,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { Connection, Record } from 'jsforce';
 import { Error } from 'jsforce/lib/api/soap/schema';
 import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
+import { ProfileMetadataType, PermissionSetRecord } from './MetadataTypes';
 
 Messages.importMessagesDirectory(__dirname);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'skinnyprofile.create');

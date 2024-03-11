@@ -6,3 +6,11 @@ export function toTitleCase(text: string): string {
 
   return sentence.join(' ');
 }
+
+export function toApiName(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/ /g, '_')
+    .replace(/[^\w\s]/gi, '');
+}
