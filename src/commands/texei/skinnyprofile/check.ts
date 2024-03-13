@@ -1,10 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import xml2js = require('xml2js');
 import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { nodesNotAllowed } from '../../../shared/skinnyProfileHelper';
+import { permissionSetNodes } from '../../../shared/skinnyProfileHelper';
 import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
+import { ProfileMetadataType } from './MetadataTypes';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -76,7 +77,7 @@ export default class Check extends SfCommand<CheckResult> {
             this.debug(value);
 
             if (Object.prototype.hasOwnProperty.call(profileJson.Profile, key)) {
-              if (nodesNotAllowed.includes(key)) {
+              if (permissionSetNodes.includes(key)) {
                 // Could definitely be improved
                 if (!invalidProfiles.includes(profilePath)) {
                   invalidProfiles.push(profilePath);

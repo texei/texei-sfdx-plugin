@@ -1,11 +1,12 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { XMLParser } from 'fast-xml-parser';
 import { Connection, Record } from 'jsforce';
 import { Error } from 'jsforce/lib/api/soap/schema';
 import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
+import { ProfileMetadataType, PermissionSetRecord } from './MetadataTypes';
 
 Messages.importMessagesDirectory(__dirname);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'skinnyprofile.create');
