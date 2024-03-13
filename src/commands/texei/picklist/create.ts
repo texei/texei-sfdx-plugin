@@ -5,8 +5,8 @@
 /* eslint-disable class-methods-use-this */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable no-await-in-loop */
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
 import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';

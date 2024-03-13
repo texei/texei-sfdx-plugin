@@ -2,8 +2,8 @@
 // TODO: Do more generic functions, better suffid handling, test folder exists everywhere
 // Also maybe some attribute to ask for just name, file name, full name for retrieve
 // ex. for record type: MyRecordTypeForAccount, MyRecordTypeForAccount.recordType-meta.xml, Account.MyRecordTypeForAccount
-import * as path from 'path';
-import * as fs from 'fs';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
 import { NamedPackageDir, SfProject, SfProjectJson } from '@salesforce/core';
 import { JsonArray, JsonMap } from '@salesforce/ts-types';
 const defaultProjectFolder = 'force-app';

@@ -1,8 +1,8 @@
-import * as path from 'path';
-import { promises as fs } from 'fs';
+import * as path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { Config, expect } from '@salesforce/command/lib/test';
 import Retrieve from '../../../../src/commands/texei/skinnyprofile/retrieve';
-import { nodesNotAllowed } from '../../../../src/shared/skinnyProfileHelper';
+import { permissionSetNodes } from '../../../../src/shared/skinnyProfileHelper';
 
 describe('skinnyprofile:retrieve', () => {
   const config = new Config({ root: path.resolve(__dirname, '../../package.json') });
@@ -16,7 +16,7 @@ describe('skinnyprofile:retrieve', () => {
     const cleanedProfile = await retrieve.cleanProfile(profileMetadata);
 
     // Testing all nodes that should be removed
-    for (const val of nodesNotAllowed) {
+    for (const val of permissionSetNodes) {
       expect(cleanedProfile.includes(val), `node '${val}' should have been removed from profile :( `).to.equal(false);
     }
 

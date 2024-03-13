@@ -1,10 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import xml2js = require('xml2js');
 import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { nodesNotAllowed } from '../../../shared/skinnyProfileHelper';
+import { permissionSetNodes } from '../../../shared/skinnyProfileHelper';
 import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
+import { ProfileMetadataType } from './MetadataTypes';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -40,58 +41,65 @@ export default class Check extends SfCommand<CheckResult> {
     let commandResult = '';
 
     // Get profiles files path
+    let profileDirPath = '';
     if (flags.path) {
       // A path was provided with the flag
-      profilesToCheck = getProfilesInPath(flags.path, true);
+      profileDirPath = flags.path;
     } else {
       // Else look in the default package directory
-      const defaultPackageDirectory = path.join(await getDefaultPackagePath(), 'profiles');
-      profilesToCheck = getProfilesInPath(defaultPackageDirectory, true);
+      profileDirPath = path.join(await getDefaultPackagePath(), 'profiles');
     }
 
-    if (profilesToCheck === undefined || profilesToCheck.length === 0) {
-      commandResult = 'No Profile found';
-    } else {
-      for (const profilePath of profilesToCheck) {
-        // Generate path
-        const filePath = path.join(process.cwd(), profilePath);
+    if (fs.existsSync(profileDirPath)) {
+      // There is a profiles folder
+      profilesToCheck = getProfilesInPath(profileDirPath, true);
 
-        // Read data file
-        const data = fs.readFileSync(filePath, 'utf8');
+      if (profilesToCheck === undefined || profilesToCheck.length === 0) {
+        commandResult = 'No Profile found';
+      } else {
+        for (const profilePath of profilesToCheck) {
+          // Generate path
+          const filePath = path.join(process.cwd(), profilePath);
 
-        // Parsing file
-        // TODO: refactor to avoid await in loop ? Not sure we want all metadata in memory
-        // eslint-disable-next-line
-        const profileJson: ProfileMetadataType = (await xml2js.parseStringPromise(data)) as ProfileMetadataType;
+          // Read data file
+          const data = fs.readFileSync(filePath, 'utf8');
 
-        // Looking for unwanted nodes
-        for (const [key, value] of Object.entries(profileJson?.Profile)) {
-          this.debug('key:');
-          this.debug(key);
-          this.debug('value:');
-          this.debug(value);
+          // Parsing file
+          // TODO: refactor to avoid await in loop ? Not sure we want all metadata in memory
+          // eslint-disable-next-line
+          const profileJson: ProfileMetadataType = (await xml2js.parseStringPromise(data)) as ProfileMetadataType;
 
-          if (Object.prototype.hasOwnProperty.call(profileJson.Profile, key)) {
-            if (nodesNotAllowed.includes(key)) {
-              // Could definitely be improved
-              if (!invalidProfiles.includes(profilePath)) {
-                invalidProfiles.push(profilePath);
+          // Looking for unwanted nodes
+          for (const [key, value] of Object.entries(profileJson?.Profile)) {
+            this.debug('key:');
+            this.debug(key);
+            this.debug('value:');
+            this.debug(value);
+
+            if (Object.prototype.hasOwnProperty.call(profileJson.Profile, key)) {
+              if (permissionSetNodes.includes(key)) {
+                // Could definitely be improved
+                if (!invalidProfiles.includes(profilePath)) {
+                  invalidProfiles.push(profilePath);
+                }
+                break;
               }
-              break;
             }
           }
         }
       }
-    }
 
-    if (invalidProfiles.length === 0) {
-      commandResult = 'All Profiles valid';
+      if (invalidProfiles.length === 0) {
+        commandResult = 'All Profiles valid';
+      } else {
+        throw new SfError(
+          `Invalid Profile${invalidProfiles.length > 1 ? 's' : ''} found: ${invalidProfiles.join(
+            ', '
+          )}. Please run sf texei skinnyprofile retrieve`
+        );
+      }
     } else {
-      throw new SfError(
-        `Invalid Profile${invalidProfiles.length > 1 ? 's' : ''} found: ${invalidProfiles.join(
-          ', '
-        )}. Please run sfdx texei:skinnyprofile:retrieve`
-      );
+      commandResult = 'No profiles folder found';
     }
 
     this.log(commandResult);

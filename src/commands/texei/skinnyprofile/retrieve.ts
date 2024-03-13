@@ -6,8 +6,8 @@
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import * as path from 'path';
-import * as fs from 'fs';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
 import xml2js = require('xml2js');
 import unzipper = require('unzipper');
 import {
@@ -21,7 +21,7 @@ import { Messages, Connection, SfError } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import { SourceTracking } from '@salesforce/source-tracking';
 import { getMetadata, getLayoutsForObject, getRecordTypesForObject } from '../../../shared/sfdxProjectFolder';
-import { nodesNotAllowed, nodesHavingDefault } from '../../../shared/skinnyProfileHelper';
+import { permissionSetNodes, nodesHavingDefault } from '../../../shared/skinnyProfileHelper';
 
 // Initialize Messages with the current plugin directory
 Messages.importMessagesDirectory(__dirname);
@@ -47,8 +47,8 @@ type MetadataTypesToRetrieve = {
 
 export default class Retrieve extends SfCommand<RetrieveResult> {
   public static readonly summary = messages.getMessage('summary');
-
-  public static readonly examples = ['$ sf texei skinnyprofile retrieve --target-org MyScratchOrg'];
+  public static readonly description = messages.getMessage('description');
+  public static readonly examples = messages.getMessages('examples');
 
   // TODO: add path for project files
   public static readonly flags = {
@@ -220,11 +220,12 @@ export default class Retrieve extends SfCommand<RetrieveResult> {
     for (const nodeKey in profileJson?.Profile) {
       if (Object.prototype.hasOwnProperty.call(profileJson.Profile, nodeKey)) {
         // Remove node
-        if (nodesNotAllowed.includes(nodeKey)) {
+        if (permissionSetNodes.includes(nodeKey)) {
           delete profileJson.Profile[nodeKey];
         } else if (nodesHavingDefault.includes(nodeKey)) {
           // Remove node, keeping only default value
           for (const nodeValue in profileJson.Profile[nodeKey]) {
+            // TODO: what about personAccountDefault ?
             if (profileJson.Profile[nodeKey][nodeValue].default[0] === 'false') {
               delete profileJson.Profile[nodeKey][nodeValue];
             }

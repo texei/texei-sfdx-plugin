@@ -3,9 +3,9 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import util = require('util');
-import * as path from 'path';
+import * as path from 'node:path';
 import {
   SfCommand,
   Flags,

@@ -1,11 +1,12 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { XMLParser } from 'fast-xml-parser';
 import { Connection, Record } from 'jsforce';
 import { Error } from 'jsforce/lib/api/soap/schema';
 import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
+import { ProfileMetadataType, PermissionSetRecord } from './MetadataTypes';
 
 Messages.importMessagesDirectory(__dirname);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'skinnyprofile.create');
@@ -40,6 +41,7 @@ export default class Create extends SfCommand<SkinnyprofileCreateResult> {
 
   public async run(): Promise<SkinnyprofileCreateResult> {
     const noProfile = 'No Profile found';
+    const noProfileFolder = 'No profiles folder found';
     const profileSucceed = 'Creation succeeded';
     const profileFailed = 'Some Profiles creation failed, beware that some profiles may have been created anyway';
 
@@ -60,88 +62,94 @@ export default class Create extends SfCommand<SkinnyprofileCreateResult> {
 
     // Get profiles files path
     const profilePath = flags.path ? flags.path : path.join(await getDefaultPackagePath(), 'profiles');
-    profilesInPath = getProfilesInPath(profilePath, false);
 
-    if (profilesInPath === undefined || profilesInPath.length === 0) {
-      commandResult = noProfile;
-    } else {
-      // Get existing custom profiles in target org
-      // Profile can be queried via PermissionSet, only way to find if a Profile is Custom ?
-      // https://salesforce.stackexchange.com/questions/38447/determine-custom-profile
-      const existingCustomProfiles = (
-        (
-          await this.connection.query(
-            'SELECT Profile.Name FROM PermissionSet Where IsCustom = true AND ProfileId != null'
-          )
-        ).records as PermissionSetRecord[]
-      ).map((record) => record.Profile.Name);
+    if (fs.existsSync(profilePath)) {
+      // There is a profiles folder
+      profilesInPath = getProfilesInPath(profilePath, false);
 
-      // Get User Licenses Ids from target org
-      const userLicensesMap = await this.getUserLicensesMap();
+      if (profilesInPath === undefined || profilesInPath.length === 0) {
+        commandResult = noProfile;
+      } else {
+        // Get existing custom profiles in target org
+        // Profile can be queried via PermissionSet, only way to find if a Profile is Custom ?
+        // https://salesforce.stackexchange.com/questions/38447/determine-custom-profile
+        const existingCustomProfiles = (
+          (
+            await this.connection.query(
+              'SELECT Profile.Name FROM PermissionSet Where IsCustom = true AND ProfileId != null'
+            )
+          ).records as PermissionSetRecord[]
+        ).map((record) => record.Profile.Name);
 
-      for (const profile of profilesInPath) {
-        // Generate path
-        const filePath = path.join(process.cwd(), profilePath, profile);
+        // Get User Licenses Ids from target org
+        const userLicensesMap = await this.getUserLicensesMap();
 
-        // Read data file
-        const data = fs.readFileSync(filePath, 'utf8');
+        for (const profile of profilesInPath) {
+          // Generate path
+          const filePath = path.join(process.cwd(), profilePath, profile);
 
-        // Parsing file
-        const profileJson: ProfileMetadataType = parser.parse(data) as ProfileMetadataType;
+          // Read data file
+          const data = fs.readFileSync(filePath, 'utf8');
 
-        const profileName = profile.replace('.profile-meta.xml', '');
+          // Parsing file
+          const profileJson: ProfileMetadataType = parser.parse(data) as ProfileMetadataType;
 
-        if (profileJson.Profile.custom) {
-          if (existingCustomProfiles.includes(profileName)) {
-            // Profile is custom but already exists, don't create it
-            profilesAlreadyInOrg.push(profileName);
-          } else {
-            const userLicense = userLicensesMap.get(profileJson.Profile.userLicense);
+          const profileName = profile.replace('.profile-meta.xml', '');
 
-            if (userLicense === undefined) {
-              // User License not found in org
-              profilesWithError.push({
-                name: profileName,
-                errors: [
-                  {
-                    message: `userLicense '${profileJson.Profile.userLicense}' does not exist in target org`,
-                    statusCode: 'USER_LICENSE_NOT_IN_ORG',
-                  },
-                ],
-              });
+          if (profileJson.Profile.custom) {
+            if (existingCustomProfiles.includes(profileName)) {
+              // Profile is custom but already exists, don't create it
+              profilesAlreadyInOrg.push(profileName);
             } else {
-              profileMetadata.push({
-                Name: profileName,
-                UserLicenseId: userLicense,
-                type: 'Profile',
-              });
+              const userLicense = userLicensesMap.get(profileJson.Profile.userLicense);
+
+              if (userLicense === undefined) {
+                // User License not found in org
+                profilesWithError.push({
+                  name: profileName,
+                  errors: [
+                    {
+                      message: `userLicense '${profileJson.Profile.userLicense}' does not exist in target org`,
+                      statusCode: 'USER_LICENSE_NOT_IN_ORG',
+                    },
+                  ],
+                });
+              } else {
+                profileMetadata.push({
+                  Name: profileName,
+                  UserLicenseId: userLicense,
+                  type: 'Profile',
+                });
+              }
             }
+          } else {
+            // It's a standard Profile, don't create it
+            profilesStandardSkipped.push(profileName);
           }
-        } else {
-          // It's a standard Profile, don't create it
-          profilesStandardSkipped.push(profileName);
         }
       }
-    }
 
-    if (profileMetadata.length > 0) {
-      const results = await this.connection?.soap.create(profileMetadata);
+      if (profileMetadata.length > 0) {
+        const results = await this.connection?.soap.create(profileMetadata);
 
-      for (let i = 0; i < results.length; i++) {
-        const profile = profileMetadata[i];
-        const result = results[i];
-        if (result.success) {
-          profilesCreated.push(profile.Name as string);
-        } else {
-          profilesWithError.push({
-            name: profile.Name as string,
-            errors: result.errors,
-          });
+        for (let i = 0; i < results.length; i++) {
+          const profile = profileMetadata[i];
+          const result = results[i];
+          if (result.success) {
+            profilesCreated.push(profile.Name as string);
+          } else {
+            profilesWithError.push({
+              name: profile.Name as string,
+              errors: result.errors,
+            });
+          }
         }
       }
+    } else {
+      commandResult = noProfileFolder;
     }
 
-    if (commandResult === noProfile) {
+    if (commandResult === noProfile || commandResult === noProfileFolder) {
       this.log(commandResult);
     } else {
       commandResult = profilesWithError.length > 0 ? profileFailed : profileSucceed;
@@ -172,7 +180,7 @@ export default class Create extends SfCommand<SkinnyprofileCreateResult> {
       profilesWithError,
     };
 
-    if (profilesWithError && !flags['ignoreerrors']) {
+    if (profilesWithError?.length > 0 && !flags['ignoreerrors']) {
       const finalError = new SfError(profileFailed);
       finalError.setData(finalResult);
       throw finalError;
