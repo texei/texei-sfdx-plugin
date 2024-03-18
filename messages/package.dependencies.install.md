@@ -16,7 +16,7 @@ comma-separated list of the packages to install related dependencies
 
 # flags.securitytype.summary
 
-security access type for the installed package (see force:package:install for default value)
+security access type for the installed package (see sf packageinstall for default value)
 
 # flags.namespaces.summary
 
@@ -33,3 +33,7 @@ allow Remote Site Settings and Content Security Policy websites to send or recei
 # flags.apexcompile.summary
 
 compile all Apex in the org and package, or only Apex in the package (see force:package:install for default value)
+
+# flags.upgrade-type.summary
+
+upgrade type for the package installation; available only for unlocked packages (see sf packageinstall for default value)
