@@ -8,6 +8,8 @@ this command will empty a Profile, only leaving mandatory Permissions
 
 No update to local Profile is done, but you'll be able to manually retrieve the updated Profile if needed
 
+This command is based on the Profile metadata retrieved from the READ call of the Metadata API, which can have a few glitches like some applications or objects access not returned.
+
 # examples
 
 sf texei profile empty --profile-name 'My Profile'

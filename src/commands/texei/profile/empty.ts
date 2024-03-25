@@ -13,21 +13,8 @@ export type ProfileEmptyResult = {
   emptiedProfile: string;
 };
 
-export interface DescribeTabSetResult {
-  label: string;
-  logoUrl: string;
-  namespace: string;
-  selected: boolean;
-  tabs: DescribeTab[];
-}
-
-export interface DescribeTab {
-  custom: boolean;
-  label: string;
-  miniIconUrl: string;
-  name: string;
-  sobjectName: string;
-  url: string;
+export interface TabDefinitionRecord {
+  Name: string;
 }
 
 export default class Empty extends SfCommand<ProfileEmptyResult> {
@@ -65,11 +52,9 @@ export default class Empty extends SfCommand<ProfileEmptyResult> {
     // Looking at all tabs from 'Minimum Access - Salesforce' to see which tabs are hidden
     // Couldn't find other way to know which tabs are valid, like querying tooling API or using describeTabs from SOAP API doesn't work
     const existingTabs: Set<string> = new Set<string>();
-    const tabSetResult: DescribeTabSetResult[] = (await this.connection.soap.describeTabs()) as DescribeTabSetResult[];
-    tabSetResult.forEach((element) => {
-      const nextTabs = element.tabs?.map((tab) => tab.name);
-      nextTabs.forEach((item) => existingTabs.add(item));
-    });
+    const tabSetResult: TabDefinitionRecord[] = (await this.connection.tooling.query('Select Name from TabDefinition'))
+      .records as TabDefinitionRecord[];
+    tabSetResult.forEach((item) => existingTabs.add(item.Name));
 
     const profiles: Profile[] = (await this.connection?.metadata.read('Profile', [
       flags['profile-name'],
@@ -82,8 +67,6 @@ export default class Empty extends SfCommand<ProfileEmptyResult> {
 
     const profileMetadata: Profile = profiles[0];
 
-    // standard-B2bPardotCampaigns
-
     this.spinner.start('Cleaning Profile');
     for (const nodeKey in profileMetadata) {
       if (Object.prototype.hasOwnProperty.call(profileMetadata, nodeKey)) {
@@ -95,7 +78,6 @@ export default class Empty extends SfCommand<ProfileEmptyResult> {
             const subNodeKey = profileMetadata[nodeKey][i];
             if (nodeKey === 'tabVisibilities' && !existingTabs.has((subNodeKey as ProfileTabVisibility).tab)) {
               // @ts-ignore
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               delete profileMetadata[nodeKey][i];
             } else {
               removeAllProfileAccess(nodeKey, subNodeKey as AnyJson, profileMetadata['userLicense']);
@@ -105,9 +87,6 @@ export default class Empty extends SfCommand<ProfileEmptyResult> {
       }
     }
     this.spinner.stop();
-
-    // @ts-ignore
-    delete profileMetadata['tabVisibilities']['standard-WorkRewardFund'];
 
     // Deploying to org
     this.spinner.start(`Deploying Profile: ${profileMetadata.fullName}`);
