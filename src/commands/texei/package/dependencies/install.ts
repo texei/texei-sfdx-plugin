@@ -71,6 +71,11 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
       summary: messages.getMessage('flags.apexcompile.summary'),
       required: false,
     }),
+    'upgrade-type': Flags.string({
+      char: 't',
+      summary: messages.getMessage('flags.upgrade-type.summary'),
+      required: false,
+    }),
     // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
     loglevel,
   };
@@ -259,6 +264,12 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
         if (flags.apexcompile) {
           args.push('--apexcompile');
           args.push(`${flags.apexcompile}`);
+        }
+
+        // UPGRADE TYPE
+        if (flags['upgrade-type']) {
+          args.push('--upgrade-type');
+          args.push(`${flags['upgrade-type']}`);
         }
 
         // WAIT
