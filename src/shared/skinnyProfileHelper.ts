@@ -14,9 +14,23 @@ import {
   PermissionSetRecordTypeVisibility,
   PermissionSetTabVisibility,
   PermissionSetUserPermissions,
+  ProfileApplicationVisibility,
+  ProfileTabVisibility,
+  ProfileFieldLevelSecurity,
+  ProfileObjectPermissions,
+  ProfileUserPermission,
+  ProfileApexClassAccess,
+  ProfileApexPageAccess,
+  ProfileCustomMetadataTypeAccess,
+  ProfileFlowAccess,
+  ProfileCustomPermissions,
+  ProfileCustomSettingAccesses,
+  ProfileRecordTypeVisibility,
+  ProfileExternalDataSourceAccess,
 } from '../commands/texei/skinnyprofile/MetadataTypes';
 
 // This should be on a Permission Set
+// TODO: customSettingAccesses ?
 export const permissionSetNodes = [
   'userPermissions',
   'classAccesses',
@@ -46,6 +60,13 @@ export const profileTabVisibiltyToPermissionSetTabVisibility: Map<string, string
   ['DefaultOff', 'Available'],
   ['DefaultOn', 'Visible'],
   ['Hidden', 'None'],
+]);
+
+export const mandatoryPermissionsForLicense: Map<string, string[]> = new Map([
+  [
+    'Salesforce',
+    ['ActivitiesAccess', 'AllowViewKnowledge', 'ChatterInternalUser', 'LightningConsoleAllowedForUser', 'ViewHelpLink'],
+  ],
 ]);
 
 /* Metadata without access are not part of the pulled Permission Set, so removing them to be coherent */
@@ -123,4 +144,80 @@ export function isMetadataWithoutAccess(permissionSetNodeName: string, permissio
   }
 
   return hasAccess;
+}
+
+export function removeAllProfileAccess(profileNodeName: string, profileNodeValue: AnyJson, license: string): void {
+  switch (profileNodeName) {
+    case 'applicationVisibilities': {
+      const isDefaultApp = (profileNodeValue as ProfileApplicationVisibility).default;
+      if (!isDefaultApp) {
+        (profileNodeValue as ProfileApplicationVisibility).visible = false;
+      }
+      break;
+    }
+    case 'classAccesses': {
+      (profileNodeValue as ProfileApexClassAccess).enabled = false;
+      break;
+    }
+    case 'customMetadataTypeAccesses': {
+      (profileNodeValue as ProfileCustomMetadataTypeAccess).enabled = false;
+      break;
+    }
+    case 'customPermissions': {
+      (profileNodeValue as ProfileCustomPermissions).enabled = false;
+      break;
+    }
+    case 'customSettingAccesses': {
+      (profileNodeValue as ProfileCustomSettingAccesses).enabled = false;
+      break;
+    }
+    case 'externalDataSourceAccesses': {
+      (profileNodeValue as ProfileExternalDataSourceAccess).enabled = false;
+      break;
+    }
+    case 'fieldPermissions': {
+      const fieldPermission = profileNodeValue as ProfileFieldLevelSecurity;
+      fieldPermission.editable = false;
+      fieldPermission.readable = false;
+      break;
+    }
+    case 'flowAccesses': {
+      (profileNodeValue as ProfileFlowAccess).enabled = false;
+      break;
+    }
+    case 'objectPermissions': {
+      const fieldPermission = profileNodeValue as ProfileObjectPermissions;
+      fieldPermission.allowCreate = false;
+      fieldPermission.allowDelete = false;
+      fieldPermission.allowEdit = false;
+      fieldPermission.allowRead = false;
+      fieldPermission.modifyAllRecords = false;
+      fieldPermission.viewAllRecords = false;
+      break;
+    }
+    case 'pageAccesses': {
+      (profileNodeValue as ProfileApexPageAccess).enabled = false;
+      break;
+    }
+    case 'recordTypeVisibilities': {
+      const recordTypeAccess = profileNodeValue as ProfileRecordTypeVisibility;
+      if (!(recordTypeAccess.default === true || recordTypeAccess.personAccountDefault === true)) {
+        recordTypeAccess.visible = false;
+      }
+      break;
+    }
+    case 'tabVisibilities': {
+      (profileNodeValue as ProfileTabVisibility).visibility = 'Hidden';
+      break;
+    }
+    case 'userPermissions': {
+      const mandatoryPermissions = mandatoryPermissionsForLicense.get(license);
+      const permission = profileNodeValue as ProfileUserPermission;
+
+      if (!mandatoryPermissions?.includes(permission.name)) {
+        permission.enabled = false;
+      }
+      break;
+    }
+  }
 }
