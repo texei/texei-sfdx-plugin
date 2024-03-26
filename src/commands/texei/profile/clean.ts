@@ -48,7 +48,7 @@ export default class Clean extends SfCommand<ProfileCleanResult> {
     const cleanResult: string[] = [];
 
     // TODO: Keep default recordTypeVisibilities & applicationVisibilities like in skinnyprofile:retrieve
-    const defaultKeep = ['layoutAssignments', 'loginHours', 'loginIpRanges', 'custom', 'userLicense'];
+    const defaultKeep = ['layoutAssignments', 'loginHours', 'loginIpRanges', 'custom', 'userLicense', 'description'];
     const nodesToKeep = flags.keep ? flags.keep : defaultKeep;
     let profilesToClean: string[] = [];
 
