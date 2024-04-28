@@ -119,7 +119,7 @@ export default class Export extends SfCommand<ExportResult> {
       });
 
       const fileName = `${index}-${obj.name}${obj.label ? '-' + obj.label : ''}.json`;
-      const objectRecords: any = await this.getsObjectRecords(obj, recordIdsMap, flags.apitype);
+      const objectRecords: any = await this.getsObjectRecords(obj, recordIdsMap, flags.apitype, flags);
       await this.saveFile(objectRecords, fileName, flags.outputdir);
       index++;
 
@@ -129,7 +129,12 @@ export default class Export extends SfCommand<ExportResult> {
     return { message: 'Data exported' };
   }
 
-  private async getsObjectRecords(sobject: DataPlanSObject, recordIdsMap: Map<string, string>, apitype: string) {
+  private async getsObjectRecords(
+    sobject: DataPlanSObject,
+    recordIdsMap: Map<string, string>,
+    apitype: string,
+    flags: { [key: string]: any }
+  ) {
     // Query to retrieve creatable sObject fields
     let fields: string[] = [];
     const lookups = [];
@@ -307,13 +312,7 @@ export default class Export extends SfCommand<ExportResult> {
     const recordFile: any = {};
     recordFile.attributes = objectAttributes;
 
-    if (Export.flags.excludenullfields) {
-      // Filtrer les champs null de chaque enregistrement
-      const filteredRecords = recordResults.map(removeNullFields);
-      recordFile.records = filteredRecords;
-    } else {
-      recordFile.records = recordResults;
-    }
+    recordFile.records = recordResults.map((record) => removeNullFields(record, flags.excludenullfields));
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return recordFile;
@@ -429,7 +428,11 @@ export default class Export extends SfCommand<ExportResult> {
 }
 
 // add function to remove null values from object
-function removeNullFields(record: { [key: string]: any }): { [key: string]: any } {
+function removeNullFields(record: { [key: string]: any }, excludeNullFields: boolean): { [key: string]: any } {
+  if (!excludeNullFields) {
+    return record;
+  }
+
   const filteredRecord: { [key: string]: any } = {};
   for (const key in record) {
     if (record[key] !== null) {
