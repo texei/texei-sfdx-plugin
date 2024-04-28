@@ -62,6 +62,12 @@ export default class Export extends SfCommand<ExportResult> {
       options: ['rest', 'bulk'],
       default: 'rest',
     }),
+    // new flag to exclude null fields
+    excludenullfields: Flags.boolean({
+      char: 'e',
+      summary: messages.getMessage('flags.excludenullfields.summary'),
+      default: false,
+    }),
     // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
     loglevel,
   };
@@ -300,7 +306,14 @@ export default class Export extends SfCommand<ExportResult> {
 
     const recordFile: any = {};
     recordFile.attributes = objectAttributes;
-    recordFile.records = recordResults;
+
+    if (Export.flags.excludenullfields) {
+      // Filtrer les champs null de chaque enregistrement
+      const filteredRecords = recordResults.map(removeNullFields);
+      recordFile.records = filteredRecords;
+    } else {
+      recordFile.records = recordResults;
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return recordFile;
@@ -413,4 +426,15 @@ export default class Export extends SfCommand<ExportResult> {
       }
     });
   }
+}
+
+// add function to remove null values from object
+function removeNullFields(record: { [key: string]: any }): { [key: string]: any } {
+  const filteredRecord: { [key: string]: any } = {};
+  for (const key in record) {
+    if (record[key] !== null) {
+      filteredRecord[key] = record[key];
+    }
+  }
+  return filteredRecord;
 }
