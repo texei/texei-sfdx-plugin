@@ -63,9 +63,9 @@ export default class Export extends SfCommand<ExportResult> {
       default: 'rest',
     }),
     // new flag to exclude null fields
-    excludenullfields: Flags.boolean({
+    'exclude-null-fields': Flags.boolean({
       char: 'e',
-      summary: messages.getMessage('flags.excludenullfields.summary'),
+      summary: messages.getMessage('flags.exclude-null-fields.summary'),
       default: false,
     }),
     // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
@@ -312,7 +312,7 @@ export default class Export extends SfCommand<ExportResult> {
     const recordFile: any = {};
     recordFile.attributes = objectAttributes;
 
-    recordFile.records = recordResults.map((record) => removeNullFields(record, flags.excludenullfields));
+    recordFile.records = recordResults.map((record) => removeNullFields(record, flags['exclude-null-fields']));
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return recordFile;
