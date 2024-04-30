@@ -101,7 +101,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
         this.spinner.start(`Looking for '${key}'`, undefined, { stdout: true });
 
         // Getting label and traverse to corresponding input/select
-        const xpath = `//label[contains(text(), '${key}')]/ancestor::th[contains(@class, 'labelCol')]/following-sibling::td[contains(@class, 'dataCol') or contains(@class, 'data2Col')][position()=1]//*[name()='select' or name()='input']`;
+        const xpath = `//label[normalize-space(text())='${key}']/ancestor::th[contains(@class, 'labelCol')]/following-sibling::td[contains(@class, 'dataCol') or contains(@class, 'data2Col')][position()=1]//*[name()='select' or name()='input']`;
 
         // Await because some fields only appears after a few seconds when checking another one
         await page.waitForXPath(xpath);
