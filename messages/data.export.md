@@ -17,3 +17,7 @@ path to data plan file
 # flags.apitype.summary
 
 API Type to use
+
+# flags.excludenullfields.summary
+
+Exclude null fields from exported JSON files
