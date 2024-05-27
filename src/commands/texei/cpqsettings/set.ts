@@ -155,10 +155,14 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
             this.spinner.stop('Text Value already ok');
           }
         } else if (targetType === 'select') {
-          await targetInput.waitForSelector(`xpath///option[text()='${cpqSettings[tabKey][key]}']`);
-          const selectedOptionValue = await (await targetInput?.getProperty('value'))?.jsonValue();
+          // wait until option value is loaded and get select input for further processing
+          await page.waitForXPath(`${xpath}//option[text()='${cpqSettings[tabKey][key]}']`);
+          const targetSelectInputs = await page.$x(xpath);
+          const targetSelectInput = targetSelectInputs[0] as ElementHandle<Element>;
 
-          const selectedOptionElement = await targetInput.$(`option[value='${selectedOptionValue}']`);
+          const selectedOptionValue = await (await targetSelectInput?.getProperty('value'))?.jsonValue();
+
+          const selectedOptionElement = await targetSelectInput.$(`option[value='${selectedOptionValue}']`);
           currentValue = (await (await selectedOptionElement?.getProperty('text'))?.jsonValue()) as string;
 
           if (currentValue !== cpqSettings[tabKey][key]) {
@@ -168,10 +172,10 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
               );
 
             const optionElement = (
-              await targetInput.$$(`xpath///option[text()='${cpqSettings[tabKey][key]}']`)
+              await targetSelectInput.$$(`xpath///option[text()='${cpqSettings[tabKey][key]}']`)
             )[0] as ElementHandle<HTMLOptionElement>;
             const optionValue = await (await optionElement.getProperty('value')).jsonValue();
-            await targetInput.select(optionValue);
+            await targetSelectInput.select(optionValue);
 
             this.spinner.stop(`Picklist Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
