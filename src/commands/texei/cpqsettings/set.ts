@@ -104,7 +104,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
         const xpath = `xpath/.//label[normalize-space(text())='${key}']/ancestor::th[contains(@class, 'labelCol')]/following-sibling::td[contains(@class, 'dataCol') or contains(@class, 'data2Col')][position()=1]//*[name()='select' or name()='input']`;
 
         // Await because some fields only appears after a few seconds when checking another one
-        await page.waitForXPath(xpath);
+        await page.waitForSelector(xpath);
 
         const targetInputs = await page.$$(xpath);
         const targetInput = targetInputs[0];
