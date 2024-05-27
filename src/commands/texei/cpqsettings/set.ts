@@ -197,7 +197,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     await saveButton?.click();
     await navigationPromise;
     // Timeout to wait for save, there should be a better way to do it
-    await page.waitForTimeout(3000);
+    await new Promise((r) => setTimeout(r, 3000));
 
     // Look for errors
     const errors = await page.$('.message.errorM3 .messageText');
