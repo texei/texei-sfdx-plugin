@@ -166,21 +166,22 @@ export default class Extract extends SfCommand<OrgShapeExtractResult> {
       const types = [{ type: 'Settings', folder: null }];
       // @ts-ignore: TODO: working code, but look at TS warning
       // eslint-disable-next-line prefer-arrow-callback
-      await conn.metadata.list(types, apiVersion, function (err, metadata) {
-        if (err) {
+      await conn.metadata
+        .list(types, apiVersion)
+        .then((metadata) => {
+          for (const meta of metadata) {
+            const settingType = meta.fullName + meta.type;
+            // Querying settings details - Is there a way to do only 1 query with jsforce ?
+            // @ts-ignore: TODO: working code, but look at TS warning
+            const settingPromise = conn.metadata.read(settingType, settingType);
+            // @ts-ignore: TODO: working code, but look at TS warning
+            settingPromises.push(settingPromise);
+          }
+        })
+        .catch((err) => {
           // eslint-disable-next-line no-console
-          return console.error('err', err);
-        }
-
-        for (const meta of metadata) {
-          const settingType = meta.fullName + meta.type;
-
-          // Querying settings details - Is there a way to do only 1 query with jsforce ?
-          const settingPromise = conn.metadata.read(settingType, settingType);
-          // @ts-ignore: TODO: working code, but look at TS warning
-          settingPromises.push(settingPromise);
-        }
-      });
+          throw new SfError(`Unable to extract shape: ${err}`);
+        });
 
       // Waiting for all promises to resolve
       await Promise.all(settingPromises).then((settingValues) => {
@@ -285,8 +286,7 @@ export default class Extract extends SfCommand<OrgShapeExtractResult> {
                 for (const prop in setting[property]) {
                   if (
                     // @ts-ignore: TODO: working code, but look at TS warning
-                    setting.hasOwnProperty(property) && // @ts-ignore: TODO: working code, but look at TS warning
-                    setting[property].hasOwnProperty(prop) &&
+                    setting.hasOwnProperty(property) &&
                     settingValuesToIgnore.includes(prop)
                   ) {
                     delete setting[property][prop];
