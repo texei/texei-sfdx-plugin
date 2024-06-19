@@ -129,6 +129,9 @@ export default class Extract extends SfCommand<OrgShapeExtractResult> {
     }
 
     if (flags.scope === 'shaperepresentation') {
+      this.warn(
+        'ShapeRepresentation Edition, Features and Settings fields are not longer available, this scope is no longer working.'
+      );
       const shapeQuery = "Select Edition, Features, Settings from ShapeRepresentation where Status = 'Active'";
       try {
         const shapeRepresentation = (await conn.query(shapeQuery)).records[0];
