@@ -1,7 +1,7 @@
 # -- CLEAN
 tmp/
-# use yarn by default, so ignore npm
-package-lock.json
+
+# yarn.lock
 
 # never checkin npm config
 .npmrc
@@ -49,7 +49,6 @@ oclif.manifest.json
 *-error.log
 /dist
 /lib
-/package-lock.json
 /tmp
 /local
 .sfdx

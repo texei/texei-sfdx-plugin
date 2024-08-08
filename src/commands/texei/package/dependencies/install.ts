@@ -199,23 +199,23 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
 
       // Getting Installation Key(s)
       let installationKeysString: string = flags.installationkeys as string;
-      let installationKeys = {};
+      const installationKeys = {};
       if (installationKeysString) {
         installationKeysString = installationKeysString.trim();
-        let installationKeysSplit = installationKeysString.split(' ');
-      
+        const installationKeysSplit = installationKeysString.split(' ');
+
         // Format is 1: 2: 3: ... need to remove these
-        for (let installationKey of installationKeysSplit) {
+        for (const installationKey of installationKeysSplit) {
           const key = installationKey.slice(0, installationKey.indexOf(':'));
           const password = installationKey.slice(installationKey.indexOf(':') + 1);
-      
+
           if (!key) {
             // Format is not correct, throw an error
             throw new SfError('Installation Key should have this format: 1:MyPackage1Key 2: 3:MyPackage3Key');
           }
           if (installationKeys[key]) {
             // Don't assume last overrides
-            throw new SfError("key already exists: " + key);
+            throw new SfError('key already exists: ' + key);
           } else {
             // Keys don't have to be in a specific order and packages without keys don't require it specifed
             installationKeys[key] = password;
