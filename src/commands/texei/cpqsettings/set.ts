@@ -69,7 +69,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     // Init browser
     const browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: !(process.env.BROWSER_DEBUG === 'true') ? 'new' : false,
+      headless: process.env.BROWSER_DEBUG === 'true' ? false : true,
     });
     const page = await browser.newPage();
 
@@ -88,7 +88,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
       result[tabKey] = {};
 
       // Getting id for label
-      const tabs = await page.$x(`//td[contains(text(), '${tabKey}')]`);
+      const tabs = await page.$$(`xpath/.//td[contains(text(), '${tabKey}')]`);
       if (tabs.length !== 1) this.error(`Tab ${tabKey} not found!`);
 
       // Clicking on tab
@@ -101,13 +101,13 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
         this.spinner.start(`Looking for '${key}'`, undefined, { stdout: true });
 
         // Getting label and traverse to corresponding input/select
-        const xpath = `//label[normalize-space(text())='${key}']/ancestor::th[contains(@class, 'labelCol')]/following-sibling::td[contains(@class, 'dataCol') or contains(@class, 'data2Col')][position()=1]//*[name()='select' or name()='input']`;
+        const xpath = `xpath/.//label[normalize-space(text())='${key}']/ancestor::th[contains(@class, 'labelCol')]/following-sibling::td[contains(@class, 'dataCol') or contains(@class, 'data2Col')][position()=1]//*[name()='select' or name()='input']`;
 
         // Await because some fields only appears after a few seconds when checking another one
-        await page.waitForXPath(xpath);
+        await page.waitForSelector(xpath);
 
-        const targetInputs = await page.$x(xpath);
-        const targetInput = targetInputs[0] as ElementHandle<Element>;
+        const targetInputs = await page.$$(xpath);
+        const targetInput = targetInputs[0];
 
         let targetType = '';
         const nodeType = await (await targetInput?.getProperty('nodeName'))?.jsonValue();
@@ -156,9 +156,9 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
           }
         } else if (targetType === 'select') {
           // wait until option value is loaded and get select input for further processing
-          await page.waitForXPath(`${xpath}//option[text()='${cpqSettings[tabKey][key]}']`);
-          const targetSelectInputs = await page.$x(xpath);
-          const targetSelectInput = targetSelectInputs[0] as ElementHandle<Element>;
+          await page.waitForSelector(`${xpath}//option[text()='${cpqSettings[tabKey][key]}']`);
+          const targetSelectInputs = await page.$$(xpath);
+          const targetSelectInput = targetSelectInputs[0];
 
           const selectedOptionValue = await (await targetSelectInput?.getProperty('value'))?.jsonValue();
 
@@ -172,7 +172,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
               );
 
             const optionElement = (
-              await targetSelectInput.$$(`xpath///option[text()='${cpqSettings[tabKey][key]}']`)
+              await targetSelectInput.$$(`xpath/.//option[text()='${cpqSettings[tabKey][key]}']`)
             )[0] as ElementHandle<HTMLOptionElement>;
             const optionValue = await (await optionElement.getProperty('value')).jsonValue();
             await targetSelectInput.select(optionValue);
@@ -197,7 +197,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     await saveButton?.click();
     await navigationPromise;
     // Timeout to wait for save, there should be a better way to do it
-    await page.waitForTimeout(3000);
+    await new Promise((r) => setTimeout(r, 3000));
 
     // Look for errors
     const errors = await page.$('.message.errorM3 .messageText');
