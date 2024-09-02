@@ -5,7 +5,7 @@
     "rootDir": "src",
     "strictNullChecks": true,
     "skipLibCheck": true,
-    "lib": ["dom"]
+    "lib": ["dom", "ES2023"]
   },
   "include": ["./src/**/*.ts"]
 }

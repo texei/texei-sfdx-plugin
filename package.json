@@ -105,8 +105,17 @@
           },
           "data": {
             "description": "Commands to manage data"
+          },
+          "source": {
+            "external": true,
+            "subtopics": {
+              "flow": {
+                "description": "Convert a Flow to a Subflow"
+              }
+            }
           }
-        }
+        },
+        "external": true
       }
     }
   },
