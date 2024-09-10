@@ -17,6 +17,7 @@ export type Flow = {
     triggerType?: string;
     filterFormula?: string;
     filters?: FlowRecordFilter[];
+    scheduledPaths?: FlowScheduledPath[];
   };
   variables?: FlowVariable[];
 };
@@ -39,4 +40,8 @@ export type FlowRecordFilter = {
 export type FlowElementReferenceOrValue = {
   apexValue?: string;
   booleanValue?: boolean;
+};
+
+export type FlowScheduledPath = {
+  recordField: string;
 };

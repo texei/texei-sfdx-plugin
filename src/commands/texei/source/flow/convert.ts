@@ -1,8 +1,7 @@
-/* eslint-disable no-console */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
-import { Messages } from '@salesforce/core';
+import { Messages, SfError } from '@salesforce/core';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import { getDefaultPackagePath } from '../../../../shared/sfdxProjectFolder';
 import { FlowMetadataType, FlowVariable } from './MetadataTypes';
@@ -19,7 +18,7 @@ export default class TexeiSourceFlowConvert extends SfCommand<TexeiSourceFlowCon
   public static readonly description = messages.getMessage('description');
   public static readonly examples = messages.getMessages('examples');
 
-  // TODO: add flag for converted flow name
+  // Potential improvement: add a flag to convert entry criteria to decision node
   public static readonly flags = {
     name: Flags.string({
       summary: messages.getMessage('flags.name.summary'),
@@ -134,10 +133,13 @@ export default class TexeiSourceFlowConvert extends SfCommand<TexeiSourceFlowCon
         this.warn(messages.getMessage('warning.filters'));
       }
 
+      if (flowJson.Flow?.start?.scheduledPaths) {
+        throw new SfError(messages.getMessage('error.no-scheduled-paths'));
+      }
+
       // Writing the new flow;
       const builder = new XMLBuilder(xmlParserBuilderOptions);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const flowXml = builder.build(flowJson);
+      const flowXml = builder.build(flowJson) as string;
 
       if (flags['save-to-file-name']) {
         const newFlowName = flags['save-to-file-name'].endsWith('.flow-meta.xml')
@@ -147,7 +149,7 @@ export default class TexeiSourceFlowConvert extends SfCommand<TexeiSourceFlowCon
       } else {
         savedFlowPath = flowPath;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       fs.writeFileSync(savedFlowPath, flowXml, 'utf8');
     } else {
       this.warn(`Flow ${flowPath} doesn't exist`);
