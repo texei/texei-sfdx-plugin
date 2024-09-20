@@ -224,8 +224,19 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     return `${instanceUrlClean}/secur/frontdoor.jsp?sid=${accessToken}`;
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  private async getSettingURL(urlOfInstance: string) {
-    return `${urlOfInstance.substring(0, urlOfInstance.indexOf('.'))}--sbqq.visualforce.com/apex/EditSettings`;
+  private async getSettingURL(urlOfInstance: string): Promise<string> {
+    let prefix;
+
+    if (this.org.isScratch()) {
+      prefix = "--sbqq.scratch";
+    } else if (this.org.isSandbox()) {
+      prefix = "--sbqq.sandbox";
+    } else {
+      prefix = "--sbqq";
+    }
+  
+    const ending = `${prefix}.vf.force.com/apex/EditSettings`
+    
+    return `${urlOfInstance.substring(0, urlOfInstance.indexOf('.'))}${ending}`;
   }
 }
