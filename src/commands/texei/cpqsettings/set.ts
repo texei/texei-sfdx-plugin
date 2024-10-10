@@ -228,15 +228,15 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     let prefix;
 
     if (this.org.isScratch()) {
-      prefix = "--sbqq.scratch";
-    } else if (this.org.isSandbox()) {
-      prefix = "--sbqq.sandbox";
+      prefix = '--sbqq.scratch';
+    } else if (await this.org.isSandbox()) {
+      prefix = '--sbqq.sandbox';
     } else {
-      prefix = "--sbqq";
+      prefix = '--sbqq';
     }
-  
-    const ending = `${prefix}.vf.force.com/apex/EditSettings`
-    
+
+    const ending = `${prefix}.vf.force.com/apex/EditSettings`;
+
     return `${urlOfInstance.substring(0, urlOfInstance.indexOf('.'))}${ending}`;
   }
 }
