@@ -13,10 +13,10 @@ import util = require('util');
 import { SfCommand, Flags, loglevel } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
-import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
+import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder.js';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.

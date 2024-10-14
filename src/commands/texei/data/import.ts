@@ -27,7 +27,7 @@ import { Messages, SfError, Connection } from '@salesforce/core';
 import { Record, RecordResult, SuccessResult, ErrorResult, ExecuteOptions, DescribeSObjectResult } from 'jsforce';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.

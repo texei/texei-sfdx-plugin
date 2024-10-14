@@ -3,10 +3,10 @@ import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
-import { getDefaultPackagePath } from '../../../../shared/sfdxProjectFolder';
-import { FlowMetadataType, FlowVariable } from './MetadataTypes';
+import { getDefaultPackagePath } from '../../../../shared/sfdxProjectFolder.js';
+import { FlowMetadataType, FlowVariable } from './MetadataTypes.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'texei.source.flow.convert');
 
 export type TexeiSourceFlowConvertResult = {

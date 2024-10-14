@@ -27,7 +27,7 @@ import {
   ProfileCustomSettingAccesses,
   ProfileRecordTypeVisibility,
   ProfileExternalDataSourceAccess,
-} from '../commands/texei/skinnyprofile/MetadataTypes';
+} from '../commands/texei/skinnyprofile/MetadataTypes.js';
 
 // This should be on a Permission Set
 // TODO: customSettingAccesses ?

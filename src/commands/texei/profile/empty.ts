@@ -1,11 +1,11 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { Connection } from 'jsforce';
+import { Connection } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
-import { permissionSetNodes, nodesHavingDefault, removeAllProfileAccess } from '../../../shared/skinnyProfileHelper';
-import { Profile, ProfileTabVisibility } from '../skinnyprofile/MetadataTypes';
+import { permissionSetNodes, nodesHavingDefault, removeAllProfileAccess } from '../../../shared/skinnyProfileHelper.js';
+import { Profile, ProfileTabVisibility } from '../skinnyprofile/MetadataTypes.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'profile.empty');
 
 export type ProfileEmptyResult = {
@@ -41,7 +41,7 @@ export default class Empty extends SfCommand<ProfileEmptyResult> {
     const { flags } = await this.parse(Empty);
 
     // Create a connection to the org
-    this.connection = flags['target-org']?.getConnection(flags['api-version']) as Connection;
+    this.connection = flags['target-org']?.getConnection(flags['api-version']);
 
     let commandResult = '';
 

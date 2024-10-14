@@ -19,10 +19,10 @@ import {
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { toTitleCase } from '../../../../shared/utils';
+import { toTitleCase } from '../../../../shared/utils.js';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
@@ -120,7 +120,7 @@ export default class Extract extends SfCommand<OrgShapeExtractResult> {
 
     // Getting API Version
     // TODO: put this in a helper ? Is there a Core library method to get this OOTB ?
-    let apiVersion = flags.apiversion;
+    let apiVersion = flags['api-version'];
 
     // if there is an api version set via the apiversion flag, use it
     // Otherwise use the latest api version available on the org

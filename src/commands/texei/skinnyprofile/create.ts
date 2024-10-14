@@ -3,12 +3,13 @@ import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { XMLParser } from 'fast-xml-parser';
-import { Connection, Record } from 'jsforce';
-import { Error } from 'jsforce/lib/api/soap/schema';
-import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder';
-import { ProfileMetadataType, PermissionSetRecord } from './MetadataTypes';
+import { Record } from 'jsforce';
+import { Connection } from '@salesforce/core';
+import { Error } from 'jsforce/lib/api/soap/schema.js';
+import { getDefaultPackagePath, getProfilesInPath } from '../../../shared/sfdxProjectFolder.js';
+import { ProfileMetadataType, PermissionSetRecord } from './MetadataTypes.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'skinnyprofile.create');
 
 export type SkinnyprofileCreateResult = {
@@ -49,7 +50,7 @@ export default class Create extends SfCommand<SkinnyprofileCreateResult> {
     const parser = new XMLParser();
 
     // Create a connection to the org
-    this.connection = flags['target-org']?.getConnection(flags['api-version']) as Connection;
+    this.connection = flags['target-org']?.getConnection(flags['api-version']);
 
     let profilesInPath: string[] = [];
     const profilesCreated: string[] = [];

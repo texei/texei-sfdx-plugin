@@ -26,7 +26,7 @@ import { Messages, SfError, Connection } from '@salesforce/core';
 import { Record } from 'jsforce';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
@@ -252,6 +252,7 @@ export default class Export extends SfCommand<ExportResult> {
           // Manually reading stream instead on using jsforce directly
           // Because jsforce will return '75008.0' instead of 75008 for a number
           const recordStream = conn.bulk.query(sObjectQuery);
+          // @ts-ignore: TODO: working code, but look at TS warning
           const readStream = recordStream.stream();
           const csvToJsonParser = csv({ flatKeys: false, checkType: true });
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -262,6 +263,7 @@ export default class Export extends SfCommand<ExportResult> {
             retrievedRecords.push(JSON.parse(data.toString('utf8')));
           });
 
+          // @ts-ignore: TODO: working code, but look at TS warning
           recordStream.on('error', (error) => {
             reject(error);
           });

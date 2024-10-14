@@ -18,7 +18,7 @@ import { Messages, SfError } from '@salesforce/core';
 import { SaveResult } from 'jsforce';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 const defaultLayoutsFolder = 'force-app/main/default/layouts';
 

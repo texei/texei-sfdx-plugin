@@ -1,6 +1,6 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { Connection } from 'jsforce';
+import { Connection } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import {
   permissionSetNodes,
@@ -8,11 +8,11 @@ import {
   nodesHavingDefault,
   profileNodesToPermissionSetNodes,
   profileTabVisibiltyToPermissionSetTabVisibility,
-} from '../../../shared/skinnyProfileHelper';
-import { toApiName } from '../../../shared/utils';
-import { Profile, PermissionSetMetadataType, PermissionSetTabVisibility } from '../skinnyprofile/MetadataTypes';
+} from '../../../shared/skinnyProfileHelper.js';
+import { toApiName } from '../../../shared/utils.js';
+import { Profile, PermissionSetMetadataType, PermissionSetTabVisibility } from '../skinnyprofile/MetadataTypes.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('texei-sfdx-plugin', 'profile.convert');
 
 export type ProfileConvertResult = {
@@ -60,7 +60,7 @@ export default class Convert extends SfCommand<ProfileConvertResult> {
     const apiName = flags['override-api-name'] ? flags['override-api-name'] : toApiName(permissionSetName);
 
     // Create a connection to the org
-    this.connection = flags['target-org']?.getConnection(flags['api-version']) as Connection;
+    this.connection = flags['target-org']?.getConnection(flags['api-version']);
 
     let commandResult = '';
 

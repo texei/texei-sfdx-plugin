@@ -11,7 +11,7 @@ import { Messages, SfError } from '@salesforce/core';
 import xml2js = require('xml2js');
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 const defaultCustomLabelsFolder = 'force-app/main/default/labels';
 const customLabelsFileName = 'CustomLabels.labels-meta.xml';

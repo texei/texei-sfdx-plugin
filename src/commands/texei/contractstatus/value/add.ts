@@ -11,10 +11,10 @@ import {
   loglevel,
 } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
-import { StandardValueSetHelper } from '../../../../shared/standardValueSetHelper';
+import { StandardValueSetHelper } from '../../../../shared/standardValueSetHelper.js';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.

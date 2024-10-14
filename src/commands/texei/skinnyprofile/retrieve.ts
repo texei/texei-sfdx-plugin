@@ -17,14 +17,14 @@ import {
   requiredOrgFlagWithDeprecations,
   loglevel,
 } from '@salesforce/sf-plugins-core';
-import { Messages, Connection, SfError } from '@salesforce/core';
+import { Messages, Connection, SfError, SfProject } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import { SourceTracking } from '@salesforce/source-tracking';
-import { getMetadata, getLayoutsForObject, getRecordTypesForObject } from '../../../shared/sfdxProjectFolder';
-import { permissionSetNodes, nodesHavingDefault } from '../../../shared/skinnyProfileHelper';
+import { getMetadata, getLayoutsForObject, getRecordTypesForObject } from '../../../shared/sfdxProjectFolder.js';
+import { permissionSetNodes, nodesHavingDefault } from '../../../shared/skinnyProfileHelper.js';
 
 // Initialize Messages with the current plugin directory
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
@@ -128,9 +128,11 @@ export default class Retrieve extends SfCommand<RetrieveResult> {
     const maxApiVersion: string = await flags['target-org'].retrieveMaxApiVersion();
     await this.retrievePackage(typesToRetrieve, flags.timeout, maxApiVersion);
 
+    const projectSF = await SfProject.resolve();
+
     const tracking = await SourceTracking.create({
       org: flags['target-org'],
-      project: this.project,
+      project: projectSF,
     });
 
     // Update local tracking so that Profiles won't be listed as modified and generate conflicts later
