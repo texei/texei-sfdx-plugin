@@ -1,11 +1,17 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { Config, expect } from '@salesforce/command/lib/test';
-import Retrieve from '../../../../src/commands/texei/skinnyprofile/retrieve';
-import { permissionSetNodes } from '../../../../src/shared/skinnyProfileHelper';
+import Retrieve from '../../../../src/commands/texei/skinnyprofile/retrieve.js';
+import { permissionSetNodes } from '../../../../src/shared/skinnyProfileHelper.js';
 
 describe('skinnyprofile:retrieve', () => {
   const config = new Config({ root: path.resolve(__dirname, '../../package.json') });
+  // @ts-ignore: TODO: working code, but look at TS warning
   const retrieve: Retrieve = new Retrieve([], config);
 
   it('retrieves a profile with only profile-specific nodes', async () => {
