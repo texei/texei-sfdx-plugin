@@ -54,21 +54,20 @@ export default class Fix extends SfCommand<OrgContractFieldHistoryResult> {
       headless: !(process.env.BROWSER_DEBUG === 'true'),
     });
     const page = await browser.newPage();
+    const waitForNavigationOptions: puppeteer.WaitForOptions = { waitUntil: ['domcontentloaded', 'networkidle2'] };
+
     await page.goto(
       `${instanceUrl}/secur/frontdoor.jsp?sid=${
         flags['target-org'].getConnection(flags['api-version']).accessToken
       }&startURL=${encodeURIComponent(POST_LOGIN_PATH)}`,
-      { waitUntil: ['domcontentloaded', 'networkidle0'] }
+      waitForNavigationOptions
     );
-    const navigationPromise = page.waitForNavigation();
-
     this.debug('DEBUG Opening Contract Field History Tracking page');
-    await page.goto(`${instanceUrl}/ui/setup/layout/FieldHistoryTracking?pEntity=Contract`);
-    await navigationPromise;
+    await page.goto(`${instanceUrl}/ui/setup/layout/FieldHistoryTracking?pEntity=Contract`, waitForNavigationOptions);
 
     this.debug("DEBUG Clicking 'Save' button");
     await page.click('table > tbody > tr > #topButtonRow > .btn:nth-child(1)');
-    await navigationPromise;
+    await page.waitForNavigation(waitForNavigationOptions);
 
     this.debug('DEBUG Closing browser');
     await browser.close();

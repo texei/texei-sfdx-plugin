@@ -73,13 +73,13 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     });
     const page = await browser.newPage();
 
+    const waitForNavigationOptions: puppeteer.WaitForOptions = { waitUntil: ['domcontentloaded', 'networkidle2'] };
+
     this.log(`Logging in to instance ${instanceUrl}`);
-    await page.goto(frontdoorUrl, { waitUntil: ['domcontentloaded', 'networkidle0'] });
-    const navigationPromise = page.waitForNavigation();
+    await page.goto(frontdoorUrl, waitForNavigationOptions);
 
     this.log(`Navigating to CPQ Settings Page ${cpqSettingsUrl}`);
-    await page.goto(`${cpqSettingsUrl}`);
-    await navigationPromise;
+    await page.goto(`${cpqSettingsUrl}`, waitForNavigationOptions);
 
     // Looking for all elements to update
     // Iterating on tabs
@@ -94,7 +94,6 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
       // Clicking on tab
       const tab = tabs[0].asElement() as ElementHandle<Element>;
       await tab.click();
-      await navigationPromise;
 
       // For all fields on tab
       for (const key of Object.keys(cpqSettings[tabKey])) {
@@ -130,7 +129,7 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
               );
 
             await targetInput?.click();
-            await navigationPromise;
+            await page.waitForNavigation();
 
             this.spinner.stop(`Checkbox Value updated from ${currentValue} to ${cpqSettings[tabKey][key]}`);
           } else {
@@ -195,8 +194,8 @@ export default class Set extends SfCommand<CpqSettingsSetResult> {
     this.spinner.start('Saving changes', undefined, { stdout: true });
     const saveButton = await page.$("#page\\:form input[value='Save']");
     await saveButton?.click();
-    await navigationPromise;
-    // Timeout to wait for save, there should be a better way to do it
+    await page.waitForNavigation();
+
     await new Promise((r) => setTimeout(r, 3000));
 
     // Look for errors
