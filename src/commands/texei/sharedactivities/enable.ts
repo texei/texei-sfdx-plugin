@@ -66,7 +66,7 @@ export default class Enable extends SfCommand<SharedactivitiesEnableResult> {
     });
     const page = await browser.newPage();
     await page.goto(`${instanceUrl}/secur/frontdoor.jsp?sid=${accessToken}`, {
-      waitUntil: ['domcontentloaded', 'networkidle0'],
+      waitUntil: ['domcontentloaded', 'networkidle2'],
     });
 
     const navigationPromise = page.waitForNavigation();

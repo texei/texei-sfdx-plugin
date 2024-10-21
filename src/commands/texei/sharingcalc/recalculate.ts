@@ -70,7 +70,7 @@ export default class Recalculate extends SfCommand<SharingcalcRecalculateResult>
     const page = await browser.newPage();
     await page.goto(
       `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
-      { waitUntil: ['domcontentloaded', 'networkidle0'] }
+      { waitUntil: ['domcontentloaded', 'networkidle2'] }
     );
     const navigationPromise = page.waitForNavigation();
 

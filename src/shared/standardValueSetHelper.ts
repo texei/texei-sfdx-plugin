@@ -41,7 +41,7 @@ export class StandardValueSetHelper {
     this.page = await this.browser.newPage();
 
     await this.page.goto(`${this._connection.instanceUrl}/secur/frontdoor.jsp?sid=${this._connection.accessToken}`, {
-      waitUntil: ['domcontentloaded', 'networkidle0'],
+      waitUntil: ['domcontentloaded', 'networkidle2'],
     });
 
     this.navigationPromise = this.page.waitForNavigation();

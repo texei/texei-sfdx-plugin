@@ -96,7 +96,7 @@ export default class Suspend extends SfCommand<SharingcalcSuspendResult> {
     const page = await browser.newPage();
     await page.goto(
       `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
-      { waitUntil: ['domcontentloaded', 'networkidle0'] }
+      { waitUntil: ['domcontentloaded', 'networkidle2'] }
     );
     const navigationPromise = page.waitForNavigation();
 
