@@ -268,7 +268,7 @@ export default class Install extends SfCommand<PackageDependenciesInstallResult>
 
         // APEX COMPILE
         if (flags.apexcompile) {
-          args.push('--apexcompile');
+          args.push('--apex-compile');
           args.push(`${flags.apexcompile}`);
         }
 
