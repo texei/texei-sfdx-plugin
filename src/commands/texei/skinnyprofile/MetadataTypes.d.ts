@@ -10,6 +10,11 @@ export type Profile = {
   tabVisibilities?: ProfileTabVisibility[];
 };
 
+export type ProfileAgentAccess = {
+  agentName: string;
+  enabled: boolean;
+};
+
 export type ProfileApplicationVisibility = {
   application: string;
   default: boolean;

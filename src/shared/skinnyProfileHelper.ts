@@ -14,6 +14,7 @@ import {
   PermissionSetRecordTypeVisibility,
   PermissionSetTabVisibility,
   PermissionSetUserPermissions,
+  ProfileAgentAccess,
   ProfileApplicationVisibility,
   ProfileTabVisibility,
   ProfileFieldLevelSecurity,
@@ -30,7 +31,6 @@ import {
 } from '../commands/texei/skinnyprofile/MetadataTypes.js';
 
 // This should be on a Permission Set
-// TODO: customSettingAccesses ?
 export const permissionSetNodes = [
   'userPermissions',
   'classAccesses',
@@ -41,8 +41,10 @@ export const permissionSetNodes = [
   'tabVisibilities',
   'customMetadataTypeAccesses',
   'customPermissions',
+  'customSettingAccesses',
   'flowAccesses',
   'externalDataSourceAccesses',
+  'agentAccesses',
 ];
 
 // These metadata are on Permission Set, but Default is selected on Profile. Keeping only the default value
@@ -148,6 +150,10 @@ export function isMetadataWithoutAccess(permissionSetNodeName: string, permissio
 
 export function removeAllProfileAccess(profileNodeName: string, profileNodeValue: AnyJson, license: string): void {
   switch (profileNodeName) {
+    case 'agentAccesses': {
+      (profileNodeValue as ProfileAgentAccess).enabled = false;
+      break;
+    }
     case 'applicationVisibilities': {
       const isDefaultApp = (profileNodeValue as ProfileApplicationVisibility).default;
       if (!isDefaultApp) {
