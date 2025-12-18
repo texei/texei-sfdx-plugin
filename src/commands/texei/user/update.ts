@@ -49,7 +49,7 @@ export default class Update extends SfCommand<UpdateResult> {
 
     // TODO: update to use jsforce ?
     // https://jsforce.github.io/document/#update
-    const updateUserCommand = `sfdx force:data:record:update -s User -w "UserName=${userName}" -v "${values}" -u ${userName}`;
+    const updateUserCommand = `sf data update record --sobject User --where "UserName=${userName}" --values "${values}" --target-org ${userName}`;
 
     let result = '';
     try {
