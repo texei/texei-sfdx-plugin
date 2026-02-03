@@ -12,7 +12,7 @@ import {
   requiredOrgFlagWithDeprecations,
   loglevel,
 } from '@salesforce/sf-plugins-core';
-import { Messages } from '@salesforce/core';
+import { Messages, SfError } from '@salesforce/core';
 import * as puppeteer from 'puppeteer';
 
 // Initialize Messages with the current plugin directory
@@ -27,6 +27,15 @@ export type SharingcalcRecalculateResult = {
 };
 
 const mapSharingLabel = new Map([['sharingRule', 'Sharing Rule']]);
+
+const SELECTORS = {
+  sharingRule: '#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_recalc"].btn',
+};
+
+const DEFAULT_TIMEOUTS = {
+  navigation: 60000,
+  selector: 30000,
+};
 
 export default class Recalculate extends SfCommand<SharingcalcRecalculateResult> {
   public static readonly summary = messages.getMessage('summary');
@@ -43,6 +52,14 @@ export default class Recalculate extends SfCommand<SharingcalcRecalculateResult>
       default: 'sharingRule',
       required: false,
     }),
+    'navigation-timeout': Flags.integer({
+      summary: messages.getMessage('flags.navigation-timeout.summary'),
+      required: false,
+    }),
+    'selector-timeout': Flags.integer({
+      summary: messages.getMessage('flags.selector-timeout.summary'),
+      required: false,
+    }),
     // loglevel is a no-op, but this flag is added to avoid breaking scripts and warn users who are using it
     loglevel,
   };
@@ -50,54 +67,105 @@ export default class Recalculate extends SfCommand<SharingcalcRecalculateResult>
   public async run(): Promise<SharingcalcRecalculateResult> {
     const { flags } = await this.parse(Recalculate);
 
-    const result = await this.reclaculateSharing(flags);
-
+    // Process operation
+    const result = await this.recalculateSharing(flags);
     return { message: result };
   }
 
-  private async reclaculateSharing(flags) {
-    const instanceUrl = flags['target-org'].getConnection(flags['api-version']).instanceUrl;
+  private async recalculateSharing(flags): Promise<string> {
+    this.spinner.start(`Recalculating ${mapSharingLabel.get(flags.scope)} Calculations`, undefined, { stdout: true });
 
-    const SHARING_CALC_PATH = '/p/own/DeferSharingSetupPage';
+    let browser: puppeteer.Browser | null = null;
 
-    this.spinner.start(`Resuming ${mapSharingLabel.get(flags.scope)} Calculations`, undefined, { stdout: true });
-    this.debug('DEBUG Login to Org');
+    try {
+      // Initialize browser
+      browser = await this.initializeBrowser();
 
-    const browser = await puppeteer.launch({
+      // Navigate to sharing page
+      const page = await this.navigateToSharingPage(browser, flags);
+
+      // Perform recalculate action
+      await this.performRecalculateAction(page, flags);
+
+      this.spinner.stop('Done.');
+      return `Recalculated ${mapSharingLabel.get(flags.scope)}s`;
+    } catch (error) {
+      this.spinner.stop('Failed.');
+      throw new SfError(`Failed to recalculate sharing calculations: ${error.message}`);
+    } finally {
+      if (browser) {
+        this.debug('DEBUG Closing browser');
+        await browser.close();
+      }
+    }
+  }
+
+  private async initializeBrowser(): Promise<puppeteer.Browser> {
+    this.debug('DEBUG Initializing browser');
+
+    return puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: !(process.env.BROWSER_DEBUG === 'true'),
     });
+  }
+
+  private async navigateToSharingPage(browser: puppeteer.Browser, flags): Promise<puppeteer.Page> {
+    const SHARING_CALC_PATH = '/p/own/DeferSharingSetupPage';
+
     const page = await browser.newPage();
-    await page.goto(
-      `${instanceUrl}/secur/frontdoor.jsp?sid=${flags['target-org'].getConnection(flags['api-version']).accessToken}`,
-      { waitUntil: ['domcontentloaded', 'networkidle2'] }
-    );
-    const navigationPromise = page.waitForNavigation();
 
+    // Login to Org via frontdoor
+    const connection = flags['target-org'].getConnection(flags['api-version']);
+    const instanceUrl = connection.instanceUrl;
+    const accessToken = connection.accessToken;
+
+    const navigationTimeout = flags['navigation-timeout']
+      ? flags['navigation-timeout'] * 1000
+      : DEFAULT_TIMEOUTS.navigation;
+    const waitOptions = {
+      waitUntil: ['domcontentloaded', 'networkidle2'],
+      timeout: navigationTimeout,
+    } as puppeteer.WaitForOptions;
+
+    this.debug('DEBUG Login to Org');
+    const loginUrl = `${instanceUrl}/secur/frontdoor.jsp?sid=${accessToken}`;
+    await page.goto(loginUrl, waitOptions);
+
+    // Navigate to Sharing Calculations page
     this.debug('DEBUG Opening Defer Sharing Calculations page');
+    await page.goto(`${instanceUrl}${SHARING_CALC_PATH}`, waitOptions);
 
-    await page.goto(`${instanceUrl + SHARING_CALC_PATH}`);
-    await navigationPromise;
+    return page;
+  }
 
+  private async performRecalculateAction(page: puppeteer.Page, flags): Promise<void> {
     this.debug("DEBUG Clicking 'Recalculate' button");
 
-    try {
-      await page.click(
-        '#ep > .pbBody > .pbSubsection > .detailList > tbody > .detailRow > td > input[name="rule_recalc"].btn'
-      );
-    } catch (ex) {
-      // eslint-disable-next-line no-console
-      console.log('Unable to recalculate sharing.', ex.message);
-    }
+    // Get the appropriate selector for the scope
+    const selector = SELECTORS[flags.scope] || SELECTORS.sharingRule;
+    this.debug(`DEBUG Using selector: ${selector}`);
 
-    await navigationPromise;
+    const navigationTimeout = flags['navigation-timeout']
+      ? flags['navigation-timeout'] * 1000
+      : DEFAULT_TIMEOUTS.navigation;
+    const selectorTimeout = flags['selector-timeout'] ? flags['selector-timeout'] * 1000 : DEFAULT_TIMEOUTS.selector;
 
-    this.debug('DEBUG Closing browser');
+    const selectorOptions = {
+      visible: true,
+      timeout: selectorTimeout,
+    };
 
-    await browser.close();
+    const waitOptions = {
+      waitUntil: ['domcontentloaded', 'networkidle2'],
+      timeout: navigationTimeout,
+    } as puppeteer.WaitForOptions;
 
-    this.spinner.stop('Done.');
+    // Wait for element to be visible and clickable
+    await page.waitForSelector(selector, selectorOptions);
 
-    return `Recalculated ${mapSharingLabel.get(flags.scope)}s`;
+    // Perform click and wait for navigation simultaneously
+    await Promise.all([page.waitForNavigation(waitOptions), page.click(selector)]);
+
+    this.debug('DEBUG Recalculate action completed successfully');
   }
 }
