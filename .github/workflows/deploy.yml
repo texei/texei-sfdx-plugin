@@ -1,0 +1,54 @@
+---
+name: "Build & Deploy"
+
+on:
+  push:
+    branches:
+      - master
+  release:
+    types:
+      - created
+
+jobs:
+ 
+  deploy_beta:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    name: Deploy beta
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
+    environment:
+      name: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          scope: "fabientaillon"
+      - run: yarn config set registry "https://registry.npmjs.org"
+      - run: yarn install --frozen-lockfile
+      - run: yarn config set version-git-tag false && tsc -b
+      - run: BETAID=$(date '+%Y%m%d%H%M') && yarn version --prepatch --preid="beta$BETAID"
+      - run: yarn config set network-timeout 300000 && npm publish --tag beta
+
+  deploy_release:
+    if: github.event_name == 'release'
+    name: Deploy release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
+    environment:
+      name: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          scope: "fabientaillon"
+      - run: yarn config set registry "https://registry.npmjs.org"
+      - run: yarn install --frozen-lockfile
+      - run: yarn config set network-timeout 300000 && npm publish
